@@ -19,6 +19,8 @@ to run locally.
 
 ## 2. Setup
 
+I would highly recommend running this on Pycharm or similar
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
@@ -162,3 +164,7 @@ with "Start in" set to this folder.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
   there's no need to hammer their login endpoint, and it's not clear how
   they'd react to it.
+
+
+Made by IvarHak on GitHub with the help of Claude Code
+Feel free to use or modify however
