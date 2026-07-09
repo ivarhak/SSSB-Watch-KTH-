@@ -1,7 +1,9 @@
+<img width="1440" height="811" alt="Screenshot 2026-07-09 at 4 41 35 PM" src="https://github.com/user-attachments/assets/3d6bf8e8-27f9-46aa-ad76-657f7d64da02" />
+
 # SSSB → KTH Commute Board
 
 A local tool that logs into SSSB, checks what student housing is currently
-available, works out the commute to KTH for each area, and shows it all on
+available, displays information on housing, works out the commute to KTH for each area, and shows it all on
 a map — sorted by ascending queue days, with a refresh button and a desktop
 notification when something new gets published.
 
@@ -162,3 +164,7 @@ with "Start in" set to this folder.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
   there's no need to hammer their login endpoint, and it's not clear how
   they'd react to it.
+
+
+Made by IvarHak on GitHub with Claude code
+Feel free to use and modify however you want, Im sure its somewhat easy to convert this tool to add other schools in the Stockholm area or use it as a framework for a similar tool for another school.
