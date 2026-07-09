@@ -1,4 +1,4 @@
-# SSSB → KTH Commute Board
+# SSSB → KTH housing finder
 
 A local tool that logs into SSSB, checks what student housing is currently
 available, works out the commute to KTH for each area, and shows it all on
