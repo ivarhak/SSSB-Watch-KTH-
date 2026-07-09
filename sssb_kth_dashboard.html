@@ -287,6 +287,13 @@
     70%{box-shadow:0 0 0 14px rgba(232,163,61,0);}
     100%{box-shadow:0 0 0 0 rgba(232,163,61,0);}
   }
+
+  .school-pin{
+    width:9px;height:9px;border-radius:50%;
+    background:#F5D547;
+    border:1.5px solid var(--navy-950);
+    opacity:0.85;
+  }
   .area-roundel{
     border-radius:50%;
     border:2px solid var(--navy-950);
@@ -361,6 +368,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const KTH = [59.3467, 18.0716];
+// Other Stockholm universities, shown as small reference pins — just
+// landmarks, not part of any SSSB-area logic.
+const OTHER_SCHOOLS = [
+  { name: 'Stockholm University', coords: [59.36397, 18.06002] },
+  { name: 'Karolinska Institutet', coords: [59.34848, 18.02790] },
+  { name: 'Stockholm School of Economics', coords: [59.34170, 18.05726] },
+  { name: 'Konstfack', coords: [59.29977, 17.99421] },
+  { name: 'Royal College of Music', coords: [59.34447, 18.08172] },
+  { name: 'Royal Institute of Art', coords: [59.32458, 18.08213] },
+];
 const LINE_COLORS = { North: '#4C9FE8', South: '#E0596B', City: '#3FBF8F' };
 const activeGroups = new Set(['North','South','City']);
 let maxCommuteMin = 45;
@@ -455,6 +472,12 @@ function initMap(){
 
   const kthIcon = L.divIcon({ className:'', html:'<div class="kth-pulse"></div>', iconSize:[16,16] });
   L.marker(KTH, { icon: kthIcon }).addTo(leafletMap).bindTooltip('KTH', {permanent:false, direction:'top'});
+
+  const schoolIcon = L.divIcon({ className:'', html:'<div class="school-pin"></div>', iconSize:[9,9] });
+  OTHER_SCHOOLS.forEach(school => {
+    L.marker(school.coords, { icon: schoolIcon }).addTo(leafletMap)
+      .bindTooltip(school.name, { direction:'top', opacity:0.85 });
+  });
 }
 
 function renderMap(){
