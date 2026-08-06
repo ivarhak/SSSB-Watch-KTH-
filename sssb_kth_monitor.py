@@ -406,6 +406,12 @@ def _click(driver, element):
 def login(driver):
     """Log into minasidor.sssb.se.
 
+    Ivar confirmed (2026-08-06) that the vacancy list renders fine in a
+    logged-out private tab, so logging in may not be needed to read listings
+    at all — see `--no-login`, which skips this entirely. Kept as the default
+    because it's unconfirmed whether the "Ködagar" (queue days) column, which
+    the whole sorting story depends on, is shown to logged-out visitors.
+
     CONFIGURABLE: field selectors below are a best guess (SSSB commonly uses
     a personnummer + password form). If login fails, run with --debug, open
     debug_page.html, right-click the username/password fields → Inspect, and
@@ -511,7 +517,8 @@ def _parse_listing_from_link(link, url: str) -> dict:
     if area is None:
         area = "Unknown"
 
-    housing_type, queue_days, rent_sek, size_sqm, floor = _parse_card_fields(card_text)
+    (housing_type, queue_days, rent_sek, size_sqm, floor,
+     max_years, el_included) = _parse_card_fields(card_text)
 
     return {
         "id": url,
@@ -522,6 +529,8 @@ def _parse_listing_from_link(link, url: str) -> dict:
         "rent_sek": rent_sek,
         "size_sqm": size_sqm,
         "floor": floor,
+        "max_years": max_years,      # contract cap in years; None = none stated
+        "el_included": el_included,  # True = "Elström ingår"; None = not stated
         "url": url,
     }
 
@@ -552,6 +561,16 @@ _CARD_VALUES_RE = re.compile(
 # to None rather than a wrong number.
 _CARD_FLOOR_RE = re.compile(r"\(\d+\s*st\)\s*(\S+)")
 
+# Two optional badges SSSB puts in the card body, before the labeled table:
+#   "Max 4 år"      — a cap on how long you may hold the contract. Confirmed
+#                     on 18 of 76 listings (all "4"); absent on the rest,
+#                     which means no cap is stated (i.e. the better case).
+#   "Elström ingår" — electricity included in the rent. Confirmed on 48 of 76.
+# Absence of either is "not stated", NOT a known negative — hence None rather
+# than 0/False, so the dashboard can tell the difference.
+_CARD_MAX_YEARS_RE = re.compile(r"Max\s+(\d+)\s*år", re.IGNORECASE)
+_CARD_EL_RE = re.compile(r"Elström\s+ingår", re.IGNORECASE)
+
 
 def _parse_floor(card_text: str) -> int | None:
     """Floor as an int, with ground floor = 0. None if it isn't stated."""
@@ -564,6 +583,17 @@ def _parse_floor(card_text: str) -> int | None:
     if raw.lower().startswith("botten"):  # "Bottenvåning" = ground floor
         return 0
     return None
+
+
+def _parse_max_years(card_text: str) -> int | None:
+    m = _CARD_MAX_YEARS_RE.search(card_text)
+    return int(m.group(1)) if m else None
+
+
+def _parse_el_included(card_text: str) -> bool | None:
+    """True if the card says electricity is included; None if it says nothing
+    (deliberately not False — we don't actually know it's excluded)."""
+    return True if _CARD_EL_RE.search(card_text) else None
 
 # The housing type ("Rum i korridor" = corridor/dorm room, "2 rum och kök" =
 # 2-room + kitchen, etc.) is whatever text sits between "Previous Next" and
@@ -590,10 +620,10 @@ def _translate_housing_type(raw: str) -> str:
 
 
 def _parse_card_fields(card_text: str):
-    """Returns (housing_type, queue_days, rent_sek, size_sqm, floor), any of
-    which may be None if the card text doesn't match the expected shape (falls
-    back to the older, looser regexes so a format change degrades rather
-    than silently returning nothing).
+    """Returns (housing_type, queue_days, rent_sek, size_sqm, floor,
+    max_years, el_included), any of which may be None if the card text doesn't
+    match the expected shape (falls back to the older, looser regexes so a
+    format change degrades rather than silently returning nothing).
     """
     housing_type = None
     type_match = _CARD_TYPE_RE.match(card_text)
@@ -601,13 +631,14 @@ def _parse_card_fields(card_text: str):
         housing_type = _translate_housing_type(type_match.group(1))
 
     floor = _parse_floor(card_text)
+    extras = (_parse_max_years(card_text), _parse_el_included(card_text))
 
     values_match = _CARD_VALUES_RE.search(card_text)
     if values_match:
         size_sqm = int(values_match.group("size"))
         rent_sek = int(re.sub(r"\s", "", values_match.group("rent")))
         queue_days = int(re.sub(r"\s", "", values_match.group("queue")))
-        return housing_type, queue_days, rent_sek, size_sqm, floor
+        return (housing_type, queue_days, rent_sek, size_sqm, floor, *extras)
 
     # Fallback: older free-text heuristics, in case SSSB's card layout has
     # drifted from the labeled-table format confirmed above.
@@ -620,7 +651,7 @@ def _parse_card_fields(card_text: str):
     size_match = re.search(r"(\d{1,3})\s*m²", card_text)
     size_sqm = int(size_match.group(1)) if size_match else None
 
-    return housing_type, queue_days, rent_sek, size_sqm, floor
+    return (housing_type, queue_days, rent_sek, size_sqm, floor, *extras)
 
 
 def scrape_listings(driver, debug: bool = False) -> list[dict]:
@@ -706,7 +737,8 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
     print(f"  parsed {len(listings)} listing(s):")
     for l in listings:
         print(f"    [{l['area']}] queue_days={l['queue_days']} rent={l['rent_sek']} "
-              f"size={l['size_sqm']} floor={l['floor']} :: {l['raw_text'][:90]}")
+              f"size={l['size_sqm']} floor={l['floor']} max_years={l['max_years']} "
+              f"el={l['el_included']} :: {l['raw_text'][:90]}")
 
     if len(listing_links) == 0:
         print("  ! No 'refid=' links found at all — either 0 listings are published right "
@@ -720,6 +752,13 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
         print(f"  ! {unknown_area_count} listing(s) didn't match a known area name — the "
               "surrounding-text heuristic may be grabbing the wrong ancestor for those. Check "
               "the raw_text above; paste one here and I can adjust it.")
+
+    missing_queue = sum(1 for l in listings if l["queue_days"] is None)
+    if listings and missing_queue > len(listings) // 2:
+        print(f"  ! {missing_queue} of {len(listings)} listing(s) have no queue-days figure. If "
+              "this run used --no-login, that's the answer: SSSB only shows 'Ködagar' to "
+              "logged-in visitors, so drop --no-login to get it back (the dashboard sorts SSSB "
+              "rows by queue days, so without it that ordering is meaningless).")
 
     return listings
 
@@ -847,12 +886,12 @@ def fetch_bostadsformedlingen() -> list[dict]:
     return listings
 
 
-def run_scrape(debug: bool = False, bf_only: bool = False) -> dict:
+def run_scrape(debug: bool = False, bf_only: bool = False, no_login: bool = False) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug, bf_only=bf_only)
+        return _run_scrape_impl(debug=debug, bf_only=bf_only, no_login=no_login)
 
 
-def _run_scrape_impl(debug: bool = False, bf_only: bool = False) -> dict:
+def _run_scrape_impl(debug: bool = False, bf_only: bool = False, no_login: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
@@ -881,10 +920,13 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False) -> dict:
             l.setdefault("provider", "SSSB")
             l.setdefault("landlord", "SSSB")
     else:
-        print("launching browser + logging in...")
+        print("launching browser..." if no_login else "launching browser + logging in...")
         driver = init_driver(headless=not debug)
         try:
-            login(driver)
+            if no_login:
+                print("(--no-login: skipping the login step — reading the public vacancy list)")
+            else:
+                login(driver)
             print("scraping listings...")
             sssb_listings = scrape_listings(driver, debug=debug)
         finally:
@@ -919,7 +961,7 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False) -> dict:
 
 # ── Local API + dashboard server ─────────────────────────────────────────
 
-def _background_poll_loop(interval_minutes: float, bf_only: bool = False):
+def _background_poll_loop(interval_minutes: float, bf_only: bool = False, no_login: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -928,14 +970,14 @@ def _background_poll_loop(interval_minutes: float, bf_only: bool = False):
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(bf_only=bf_only)
+            run_scrape(bf_only=bf_only, no_login=no_login)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
-def serve(interval_minutes: float, bf_only: bool = False):
+def serve(interval_minutes: float, bf_only: bool = False, no_login: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -954,13 +996,14 @@ def serve(interval_minutes: float, bf_only: bool = False):
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape(bf_only=bf_only))
+        return jsonify(run_scrape(bf_only=bf_only, no_login=no_login))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape(bf_only=bf_only))
+        return jsonify(run_scrape(bf_only=bf_only, no_login=no_login))
 
-    threading.Thread(target=_background_poll_loop, args=(interval_minutes, bf_only), daemon=True).start()
+    threading.Thread(target=_background_poll_loop,
+                     args=(interval_minutes, bf_only, no_login), daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -978,6 +1021,10 @@ if __name__ == "__main__":
                         help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
                              "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
                              "the last saved SSSB listings")
+    parser.add_argument("--no-login", action="store_true",
+                        help="skip the SSSB login and read the public vacancy list (confirmed to render "
+                             "logged-out). Still needs Chrome. Warns loudly if queue days come back empty, "
+                             "which would mean SSSB only shows those to logged-in visitors")
     parser.add_argument("--debug", action="store_true", help="run visible browser + dump debug_page.html")
     args = parser.parse_args()
 
@@ -987,13 +1034,13 @@ if __name__ == "__main__":
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
     elif args.once:
-        run_scrape(debug=args.debug, bf_only=args.bf_only)
+        run_scrape(debug=args.debug, bf_only=args.bf_only, no_login=args.no_login)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
-            run_scrape(debug=args.debug, bf_only=args.bf_only)
-        serve(interval_minutes=args.interval, bf_only=args.bf_only)
+            run_scrape(debug=args.debug, bf_only=args.bf_only, no_login=args.no_login)
+        serve(interval_minutes=args.interval, bf_only=args.bf_only, no_login=args.no_login)
     else:
         parser.print_help()
         sys.exit(1)

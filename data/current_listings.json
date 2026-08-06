@@ -356,7 +356,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=624f686a486d4f562f44464539775562557a374b58574d2f313077474d4d755662346c514d6164494b53343d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=564835775a796e77415761584265436c6f436b4338495950626647596131455a4c724478327a69506d36493d",
@@ -369,7 +371,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=564835775a796e77415761584265436c6f436b4338495950626647596131455a4c724478327a69506d36493d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c574c317761354773587052373339484765624563302f4d67476f4c69792f356368566b6f5078457672303d",
@@ -382,7 +386,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c574c317761354773587052373339484765624563302f4d67476f4c69792f356368566b6f5078457672303d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=425757534f306e6a4e44796368516a65354a4563735742304b42646d4a4755735358684d69485536334a6f3d",
@@ -395,7 +401,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=425757534f306e6a4e44796368516a65354a4563735742304b42646d4a4755735358684d69485536334a6f3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4a3377695575366b4b4c6e65785449796f6e736b756e73382f45787666356161645a7172364546746b4a6b3d",
@@ -408,7 +416,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4a3377695575366b4b4c6e65785449796f6e736b756e73382f45787666356161645a7172364546746b4a6b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6b6354417a784e5447353837416c472b6d57733548796d58552f4658714b2f49576250433647566769304d3d",
@@ -421,7 +431,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6b6354417a784e5447353837416c472b6d57733548796d58552f4658714b2f49576250433647566769304d3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7953644c624a4551376f54582b46425236702f7a6e5938446258503641507637324f6764416c50726f46633d",
@@ -434,7 +446,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7953644c624a4551376f54582b46425236702f7a6e5938446258503641507637324f6764416c50726f46633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=774d7a64634657474a50492b36664437763741716347796f425730476a395270587a48355773712b73576b3d",
@@ -447,7 +461,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=774d7a64634657474a50492b36664437763741716347796f425730476a395270587a48355773712b73576b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6c536b37595238535244644b67702f6459692b2b724a4b4e72677a456575475857555a31626c4a315235453d",
@@ -460,7 +476,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6c536b37595238535244644b67702f6459692b2b724a4b4e72677a456575475857555a31626c4a315235453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=436e4b2b543439596d5669365543484f746c41527275396258767271412b61355a63386e765134704541773d",
@@ -473,7 +491,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=436e4b2b543439596d5669365543484f746c41527275396258767271412b61355a63386e765134704541773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=78574967346d4e6a58505273394f2b5a793274746c4f3074624c6c474443527077374a69306178764a41383d",
@@ -486,7 +506,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=78574967346d4e6a58505273394f2b5a793274746c4f3074624c6c474443527077374a69306178764a41383d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f7433434a334a7177582b745a6464457057486f434b66695938664d33554f4e4657556463622f777742673d",
@@ -499,7 +521,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f7433434a334a7177582b745a6464457057486f434b66695938664d33554f4e4657556463622f777742673d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4f2f6b48655651316536554d722b6763617442757a2f7a392b32692b70766630364d796f756f4e686843343d",
@@ -512,7 +536,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4f2f6b48655651316536554d722b6763617442757a2f7a392b32692b70766630364d796f756f4e686843343d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4e7232716f4b7542754c30446c54542b3377483353486d63444b7a72743338306879736c4e7655516f72553d",
@@ -525,7 +551,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4e7232716f4b7542754c30446c54542b3377483353486d63444b7a72743338306879736c4e7655516f72553d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6d755a7749557233757372517934745a4134757733383030666b5249633539736c6378504a4d70653544383d",
@@ -538,7 +566,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6d755a7749557233757372517934745a4134757733383030666b5249633539736c6378504a4d70653544383d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": 4,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=304877772b6b70344f4839793749716849414c513361682b6a3036486938316f504c665956766263686e6f3d",
@@ -551,7 +581,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=304877772b6b70344f4839793749716849414c513361682b6a3036486938316f504c665956766263686e6f3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=505848644632767436776e7143686a7a512f33687a452b4f775733443632616c4b577047504e4f624943593d",
@@ -564,7 +596,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=505848644632767436776e7143686a7a512f33687a452b4f775733443632616c4b577047504e4f624943593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5a53367667514b366362456942372f65595245575a72324176443276512f43435542776f436f4c4e356f493d",
@@ -577,7 +611,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5a53367667514b366362456942372f65595245575a72324176443276512f43435542776f436f4c4e356f493d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=41336d4962706f633341616d4863563056442f3038526d7178764c6c36354646675273552b484c386b48673d",
@@ -590,7 +626,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=41336d4962706f633341616d4863563056442f3038526d7178764c6c36354646675273552b484c386b48673d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4743745264317137636831796766556a4936744e6370735935376736766f4e6c73706c4d6c3645795654593d",
@@ -603,7 +641,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4743745264317137636831796766556a4936744e6370735935376736766f4e6c73706c4d6c3645795654593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 5
+      "floor": 5,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=695679584d50795052707a6a50353547425867496470354a646b65585831557a39427255335665767875593d",
@@ -616,7 +656,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=695679584d50795052707a6a50353547425867496470354a646b65585831557a39427255335665767875593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 5
+      "floor": 5,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7569453468656f634f554b6356756c2f694634416968384a6635744531704a4b344574744d506538756d6b3d",
@@ -629,7 +671,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7569453468656f634f554b6356756c2f694634416968384a6635744531704a4b344574744d506538756d6b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4448487845437158795675627858667a6a7842316335665068447038454d59527178462b2b5234427465633d",
@@ -642,7 +686,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4448487845437158795675627858667a6a7842316335665068447038454d59527178462b2b5234427465633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4b48516546316f36664d716a4650517a43687a51726c7468387478576e786c2b4161503952433635764e593d",
@@ -655,7 +701,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4b48516546316f36664d716a4650517a43687a51726c7468387478576e786c2b4161503952433635764e593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6368535245646b525231556b7070767175584f426f67543757496133634a534e6c65584578584a765639633d",
@@ -668,7 +716,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6368535245646b525231556b7070767175584f426f67543757496133634a534e6c65584578584a765639633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=75494b4d687059734d52304f6374646765787a74576d387551382b68683271593566584e363033773762453d",
@@ -681,7 +731,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=75494b4d687059734d52304f6374646765787a74576d387551382b68683271593566584e363033773762453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 5
+      "floor": 5,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=34593771367953754e5044706c4b6a35507352686154355a356e745133743271422f4b75686b714a7179513d",
@@ -694,7 +746,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=34593771367953754e5044706c4b6a35507352686154355a356e745133743271422f4b75686b714a7179513d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=316e5363777a7339676e5659486956526d64746d654e77504c4d5a6a4d332b7636753765415438456837553d",
@@ -707,7 +761,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=316e5363777a7339676e5659486956526d64746d654e77504c4d5a6a4d332b7636753765415438456837553d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 7
+      "floor": 7,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4148464b56314677775a614461773275576b6e5374414f45784b544e724e6d3550694750594d2b384a78733d",
@@ -720,7 +776,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4148464b56314677775a614461773275576b6e5374414f45784b544e724e6d3550694750594d2b384a78733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 9
+      "floor": 9,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6959652f542b4575384d7757472b33504e42726e795145515676777061754e72635a44354d47556b5636733d",
@@ -733,7 +791,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6959652f542b4575384d7757472b33504e42726e795145515676777061754e72635a44354d47556b5636733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 11
+      "floor": 11,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=645a75442b4c68616a44476b47547369355563384b49796376565877353348477267574844434f525949453d",
@@ -746,7 +806,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=645a75442b4c68616a44476b47547369355563384b49796376565877353348477267574844434f525949453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 11
+      "floor": 11,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5239597759666c4b636a764b39787a4a2b772f766d5777776473514972496c56796e6766393034775075553d",
@@ -759,7 +821,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5239597759666c4b636a764b39787a4a2b772f766d5777776473514972496c56796e6766393034775075553d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f7a6551663677676b7357524f723150744b576b504d453234442f6d417251524a6b435a5863792f3863673d",
@@ -772,7 +836,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f7a6551663677676b7357524f723150744b576b504d453234442f6d417251524a6b435a5863792f3863673d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=507274434f5a68303073485348423570356550552b4d6b654b646a6e63653158676741755533566f5a516b3d",
@@ -785,7 +851,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=507274434f5a68303073485348423570356550552b4d6b654b646a6e63653158676741755533566f5a516b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6f6e6b2f516f4f6876716870546839787945576134396f762f6d48304c5a4c354f5149616d386850597a6b3d",
@@ -798,7 +866,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6f6e6b2f516f4f6876716870546839787945576134396f762f6d48304c5a4c354f5149616d386850597a6b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=455a474172506b36733936412b4473634a306f374c64394c6b2b7356746c4e35634a565333632b4a6269633d",
@@ -811,7 +881,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=455a474172506b36733936412b4473634a306f374c64394c6b2b7356746c4e35634a565333632b4a6269633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=49375838736632494350556a7551634737426b4d79364f56353638793362385269484d754e4f68784a36733d",
@@ -824,7 +896,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=49375838736632494350556a7551634737426b4d79364f56353638793362385269484d754e4f68784a36733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 4
+      "floor": 4,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=74546f50544b7853417074497742637845632f74765054757874355239724a626f415446543953316246733d",
@@ -837,7 +911,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=74546f50544b7853417074497742637845632f74765054757874355239724a626f415446543953316246733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c624e536b6d33727269746c346b7076517872306d324a51375975425566584477573236532b71496178773d",
@@ -850,7 +926,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c624e536b6d33727269746c346b7076517872306d324a51375975425566584477573236532b71496178773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 7
+      "floor": 7,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f49304574546f59794c543043574d6a4861764e4255434c414852685168566c7243584f486569456d7a303d",
@@ -863,7 +941,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=2f49304574546f59794c543043574d6a4861764e4255434c414852685168566c7243584f486569456d7a303d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 8
+      "floor": 8,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=476c4c6271597362394d4c4d372f362b62332f703861776d46556e43316b76715879716a703269564e6e493d",
@@ -876,7 +956,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=476c4c6271597362394d4c4d372f362b62332f703861776d46556e43316b76715879716a703269564e6e493d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 6
+      "floor": 6,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3454786e4a59764563315654577534516377796a42514c3539725030767a543548384d43573450545363773d",
@@ -889,7 +971,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3454786e4a59764563315654577534516377796a42514c3539725030767a543548384d43573450545363773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5536465944434d6c5556456655486f36416631344c614479722b6d33665074587a66347944505469514e303d",
@@ -902,7 +986,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5536465944434d6c5556456655486f36416631344c614479722b6d33665074587a66347944505469514e303d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6763695147355337436870706d5645574c596947367652527250647163796c674538305678516f375a32733d",
@@ -915,7 +1001,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6763695147355337436870706d5645574c596947367652527250647163796c674538305678516f375a32733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 4
+      "floor": 4,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=69494f683870496a665a6363774a56536a3730436b775a795567536f345648304774665532746862334e633d",
@@ -928,7 +1016,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=69494f683870496a665a6363774a56536a3730436b775a795567536f345648304774665532746862334e633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 5
+      "floor": 5,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3451622f4e485735624c6e726e476d69692b616a737452414459343042337a794759456e334852654f506b3d",
@@ -941,7 +1031,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3451622f4e485735624c6e726e476d69692b616a737452414459343042337a794759456e334852654f506b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 8
+      "floor": 8,
+      "max_years": 4,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6e6f486837726662496459634f4f38543555696e7845684651485331505756746c73683468633955634a6f3d",
@@ -954,7 +1046,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6e6f486837726662496459634f4f38543555696e7845684651485331505756746c73683468633955634a6f3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 4
+      "floor": 4,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=66796d41324c68614a32594a6f74635a446f6b387073584767345668556e4e565a4157764777774f4851673d",
@@ -967,7 +1061,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=66796d41324c68614a32594a6f74635a446f6b387073584767345668556e4e565a4157764777774f4851673d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6d336b67634c77416d632f57635972724c47744b432b4c45424634637941747130305a592b6a54675a6c493d",
@@ -980,7 +1076,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6d336b67634c77416d632f57635972724c47744b432b4c45424634637941747130305a592b6a54675a6c493d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=776f643257614570544c484c6a5946634e526155564664366f5552617a327039384d4b3233656e67676f6b3d",
@@ -993,7 +1091,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=776f643257614570544c484c6a5946634e526155564664366f5552617a327039384d4b3233656e67676f6b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=357a6e4a355349784437646c6b4b6854726a4d415564383737474c764249413364377258397a50443246593d",
@@ -1006,7 +1106,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=357a6e4a355349784437646c6b4b6854726a4d415564383737474c764249413364377258397a50443246593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=494434546c79457a67704f7a4e51473751584d3759473943304246757343685754493571447757456b79513d",
@@ -1019,7 +1121,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=494434546c79457a67704f7a4e51473751584d3759473943304246757343685754493571447757456b79513d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 0
+      "floor": 0,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=734d70707330454a59447866544c7850655441595430626239566e73597056544d51616f336571765231303d",
@@ -1032,7 +1136,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=734d70707330454a59447866544c7850655441595430626239566e73597056544d51616f336571765231303d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6a49357a556354675a6b6d67436f4a7a306e6c3474776171416e4574715573505a6e6531713741554d31343d",
@@ -1045,7 +1151,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6a49357a556354675a6b6d67436f4a7a306e6c3474776171416e4574715573505a6e6531713741554d31343d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65725279506264746274456d52647864452f2f7a5438454f346a79413445534e4638636d547a642f6358593d",
@@ -1058,7 +1166,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65725279506264746274456d52647864452f2f7a5438454f346a79413445534e4638636d547a642f6358593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65633634356d33494f327148666e3957377a457537694d487a6a5a624f31774d6a41524367484b774e79733d",
@@ -1071,7 +1181,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65633634356d33494f327148666e3957377a457537694d487a6a5a624f31774d6a41524367484b774e79733d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=415971474769774e2f6d71364d4c33346f465a5a746d476d784237754f70677a2b3663534131366f78556b3d",
@@ -1084,7 +1196,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=415971474769774e2f6d71364d4c33346f465a5a746d476d784237754f70677a2b3663534131366f78556b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 10
+      "floor": 10,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=36344272716d6e4151557a6446347242733834584766736f667333414832344d4a6176726d66476a55726b3d",
@@ -1097,7 +1211,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=36344272716d6e4151557a6446347242733834584766736f667333414832344d4a6176726d66476a55726b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 4
+      "floor": 4,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=784a61634c386b564755676275506d65454d56734b6e714558545763695047517546514d38714a4c4962453d",
@@ -1110,7 +1226,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=784a61634c386b564755676275506d65454d56734b6e714558545763695047517546514d38714a4c4962453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4464506c354a445733442f4978685644315a2b432b36775330512b6c734e507971345831577245492b546f3d",
@@ -1123,7 +1241,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4464506c354a445733442f4978685644315a2b432b36775330512b6c734e507971345831577245492b546f3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6778744e4c55495871453533617771784647716a6d565a6334592b614b6f542b41453865764b55645548773d",
@@ -1136,7 +1256,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=6778744e4c55495871453533617771784647716a6d565a6334592b614b6f542b41453865764b55645548773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3844486b7a44356b48746847775663334a6c734964447a6f4c655950415a5371367745776338534c5a6e453d",
@@ -1149,7 +1271,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=3844486b7a44356b48746847775663334a6c734964447a6f4c655950415a5371367745776338534c5a6e453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": null
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=324b754a71712f757349505038423451364e57616f4141516b4b42325234575a536368664a5a49796d6b383d",
@@ -1162,7 +1286,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=324b754a71712f757349505038423451364e57616f4141516b4b42325234575a536368664a5a49796d6b383d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5951307a586c4e73554b69767065435371356b5138444778316b3336454f59346672617151755a7a3741773d",
@@ -1175,7 +1301,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=5951307a586c4e73554b69767065435371356b5138444778316b3336454f59346672617151755a7a3741773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65732b63696e4463633150656d6a38366b65583845356d317461634736446b4143584e5a673073347268633d",
@@ -1188,7 +1316,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=65732b63696e4463633150656d6a38366b65583845356d317461634736446b4143584e5a673073347268633d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=38535847465753756c46556e45466130754d31707a616a624441702f6361344e6e494d76793469426b2b453d",
@@ -1201,7 +1331,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=38535847465753756c46556e45466130754d31707a616a624441702f6361344e6e494d76793469426b2b453d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=64383762634a453949782b4258645a774172706c535a7352697757506453386541484b42536948745462593d",
@@ -1214,7 +1346,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=64383762634a453949782b4258645a774172706c535a7352697757506453386541484b42536948745462593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=71415353626668317778676a422f6153767833476f3150495937625979594c4149472b37697436635175593d",
@@ -1227,7 +1361,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=71415353626668317778676a422f6153767833476f3150495937625979594c4149472b37697436635175593d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 4
+      "floor": 4,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7032434c433671726171585a7a4b66415a434373614b73716a46624e654e386571743135477178637676673d",
@@ -1240,7 +1376,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=7032434c433671726171585a7a4b66415a434373614b73716a46624e654e386571743135477178637676673d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=324139334c6269306957755a723872324530454b766c347563425357314951305971354d5676444e39656f3d",
@@ -1253,7 +1391,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=324139334c6269306957755a723872324530454b766c347563425357314951305971354d5676444e39656f3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=624d3044676552314b6a6b707a32726251514f505347334670687934514638554e70747354716e54594e413d",
@@ -1266,7 +1406,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=624d3044676552314b6a6b707a32726251514f505347334670687934514638554e70747354716e54594e413d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=47504b63316932484e50714f45447a77344e5a42316f34515a566a486256542f337466625153746657474d3d",
@@ -1279,7 +1421,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=47504b63316932484e50714f45447a77344e5a42316f34515a566a486256542f337466625153746657474d3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=694d685844474779367531695074694e7947494e42344a5a51655349625832393158597177786f7368346b3d",
@@ -1292,7 +1436,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=694d685844474779367531695074694e7947494e42344a5a51655349625832393158597177786f7368346b3d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 2
+      "floor": 2,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=597073322b494347794d48535866464949623773315336494f5864415543334f464c3173766e49306843413d",
@@ -1305,7 +1451,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=597073322b494347794d48535866464949623773315336494f5864415543334f464c3173766e49306843413d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 1
+      "floor": 1,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=765131744f4f54314169784a4f6e6f4c454c7065444d7a7743316c4d524c624d6741724c357054443033773d",
@@ -1318,7 +1466,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=765131744f4f54314169784a4f6e6f4c454c7065444d7a7743316c4d524c624d6741724c357054443033773d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 5
+      "floor": 5,
+      "max_years": null,
+      "el_included": true
     },
     {
       "id": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c466734665659464875706f384e7436786e496166727379636761626f6a433743433459527270316878493d",
@@ -1331,7 +1481,9 @@
       "url": "http://minasidor.sssb.se/lediga-bostader/lagenhet/?refid=4c466734665659464875706f384e7436786e496166727379636761626f6a433743433459527270316878493d",
       "provider": "SSSB",
       "landlord": "SSSB",
-      "floor": 3
+      "floor": 3,
+      "max_years": null,
+      "el_included": true
     }
   ],
   "new_listing_ids": []

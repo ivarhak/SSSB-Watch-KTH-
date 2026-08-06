@@ -137,7 +137,8 @@
   #advFilters.open{display:flex;}
   #advFilters .adv-hint{
     font-family:var(--mono);font-size:10px;color:var(--paper-dim);
-    max-width:280px;line-height:1.5;
+    max-width:330px;line-height:1.5;
+    margin-left:auto;
   }
   #advReset{
     font-family:var(--mono);font-size:11px;
@@ -173,6 +174,10 @@
   .legend button[data-g="City"] .sw{background:var(--line-city);}
   .legend button[data-p="SSSB"] .sw{background:var(--line-city);}
   .legend button[data-p="Bostadsförmedlingen"] .sw{background:var(--bf-purple);}
+  /* Opt-in requirement rather than a category toggle, so it reads as amber
+     (same colour as the cog's badge) and starts off. */
+  .legend button[data-x] .sw{background:var(--amber);}
+  .legend button[data-x]:focus-visible{outline:2px solid var(--line-north);outline-offset:2px;}
 
   #browseAllBtn{
     font-family:var(--mono);
@@ -529,10 +534,26 @@
     </div>
   </div>
 
+  <div class="control">
+    <label>Min contract</label>
+    <div class="slider-row">
+      <input type="range" id="minYears" min="0" max="10" value="0" step="1">
+      <span id="minYearsLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <div class="control">
+    <label>Must include</label>
+    <div class="legend" id="extraChips">
+      <button data-x="el" class="off" aria-pressed="false"><span class="sw"></span>Elström</button>
+    </div>
+  </div>
+
   <button id="advReset">Reset these</button>
 
-  <div class="adv-hint">Floor 0 is <em>bottenvåning</em>. Bostadsförmedlingen ads publish
-    neither floor nor queue days, so those sliders never hide them.</div>
+  <div class="adv-hint">Floor 0 is <em>bottenvåning</em>.
+    <strong>Elström</strong> keeps only listings that say <em>Elström ingår</em> — silent
+    ones and all BF ads drop out while it's on.</div>
 </div>
 
 <main>
@@ -639,6 +660,10 @@ let maxRentSek = null;
 let minSizeSqm = null;
 let minFloor = null;
 let maxFloor = null;
+let minYears = null;
+// The one filter that deliberately DOES hide unknowns: it's an explicit
+// "only if the listing says so" requirement, not a range.
+let requireEl = false;
 let currentData = null;
 let selectedArea = null;   // SSSB area name, or null
 let markers = [];
@@ -721,13 +746,18 @@ function passesFilters(l){
     if (minFloor !== null && floor < minFloor) return false;
     if (maxFloor !== null && floor > maxFloor) return false;
   }
+  // "Max N år" is a cap on the contract, so only a stated cap below the
+  // requested minimum disqualifies — no stated cap is the better case.
+  if (minYears !== null && l.max_years != null && Number(l.max_years) < minYears) return false;
+  if (requireEl && l.el_included !== true) return false;
   return true;
 }
 
 // Which of the cog's filters are engaged — drives the badge on the cog so
 // collapsing the panel can't hide the fact that it's still narrowing things.
 function advancedActiveCount(){
-  return [minSizeSqm, minFloor, maxFloor].filter(v => v !== null).length;
+  return [minSizeSqm, minFloor, maxFloor, minYears].filter(v => v !== null).length
+       + (requireEl ? 1 : 0);
 }
 
 function filtersActive(){
@@ -913,6 +943,11 @@ function rowHtml(l, newIds){
     : (commuteRef.straight_line ? '~' + commuteRef.straight_line.bike_min + ' min bike' : '');
   const title = l.provider === 'SSSB' ? l.area : (l.address || l.area);
   const sub = l.provider === 'SSSB' ? (l.type ? l.type + ' · ' : '') : (l.area + ' · ');
+  // Only what the listing actually states — a silent card shows neither.
+  const extras = [];
+  if (l.floor != null) extras.push(Number(l.floor) === 0 ? 'ground floor' : 'floor ' + l.floor);
+  if (l.el_included === true) extras.push('el ingår');
+  if (l.max_years != null) extras.push('max ' + l.max_years + ' år');
   return `
     <div class="listing-row" onclick="handleRowClick('${l.id.replace(/'/g,"\\'")}')">
       ${newIds.has(l.id) ? '<span class="new-tag">NEW</span>' : ''}
@@ -921,6 +956,7 @@ function rowHtml(l, newIds){
         <span class="queue-badge">${badgeFor(l)}</span>
       </div>
       <div class="details">${sub}${l.size_sqm ? l.size_sqm + ' m² · ' : ''}${l.rent_sek ? Number(l.rent_sek).toLocaleString() + ' kr/mo · ' : ''}${commute}</div>
+      ${extras.length ? `<div class="details">${extras.join(' · ')}</div>` : ''}
       ${providerTag(l)}
     </div>
   `;
@@ -951,7 +987,9 @@ function toggleBrowseAll(){
 
 function matchesSearch(l, q){
   if (!q) return true;
-  const haystack = [l.area, l.address, l.landlord, l.type, l.rent_sek, l.size_sqm, l.queue_days, l.deadline, l.raw_text]
+  const haystack = [l.area, l.address, l.landlord, l.type, l.rent_sek, l.size_sqm,
+                    l.queue_days, l.deadline, l.floor, l.max_years,
+                    l.el_included === true ? 'elström ingår el included' : null, l.raw_text]
     .filter(v => v != null)
     .join(' ')
     .toLowerCase();
@@ -1021,6 +1059,8 @@ function renderSidebar(){
     if (minFloor !== null && maxFloor !== null) bits.push(`floor ${floorLabel(minFloor)}–${floorLabel(maxFloor)}`);
     else if (minFloor !== null) bits.push(`floor ${floorLabel(minFloor)}+`);
     else if (maxFloor !== null) bits.push(`floor ≤${floorLabel(maxFloor)}`);
+    if (minYears !== null) bits.push(`${minYears}+ år contract`);
+    if (requireEl) bits.push('el included');
     bits.push('SSSB sorted by queue days, BF by deadline');
     header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">${bits.join(' · ')}</div>`;
   }
@@ -1082,7 +1122,19 @@ const advSliders = [
     { kind:'min', format: v => floorLabel(v) + '+', set: v => { minFloor = v; } }),
   bindLimitSlider('maxFloor', 'maxFloorLabel',
     { kind:'max', format: v => '≤' + floorLabel(v), set: v => { maxFloor = v; } }),
+  bindLimitSlider('minYears', 'minYearsLabel',
+    { kind:'min', format: v => v + ' år+', set: v => { minYears = v; } }),
 ];
+
+document.getElementById('extraChips').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  requireEl = btn.classList.contains('off');
+  btn.classList.toggle('off', !requireEl);
+  btn.setAttribute('aria-pressed', String(requireEl));
+  refreshAdvBadge();
+  render();
+});
 
 function refreshAdvBadge(){
   const n = advancedActiveCount();
@@ -1105,6 +1157,11 @@ document.getElementById('advReset').addEventListener('click', () => {
   advSliders.forEach(s => {
     s.input.value = s.input.getAttribute('value');
     s.apply();
+  });
+  requireEl = false;
+  document.querySelectorAll('#extraChips button').forEach(b => {
+    b.classList.add('off');
+    b.setAttribute('aria-pressed', 'false');
   });
   refreshAdvBadge();
   render();

@@ -138,6 +138,17 @@ instead of waiting for the next scheduled one.
 > works served from `http://localhost:5055` since that's what makes the
 > `/api/...` calls same-origin.
 
+**Don't want to log in?** Ivar confirmed the vacancy list renders fine in a
+logged-out private tab, so:
+```bash
+python sssb_kth_monitor.py --serve --no-login
+```
+skips the login step entirely — no credentials, no keyring, and none of the
+login-selector fragility described in section 3. It still needs Chrome. The
+one open question is whether SSSB shows the **Ködagar** (queue days) column to
+logged-out visitors; if it doesn't, the run prints a loud warning and you
+should drop the flag, since the dashboard sorts SSSB listings by queue days.
+
 **No Chrome available?** (phone/tablet Python interpreters, minimal servers):
 ```bash
 python sssb_kth_monitor.py --serve --bf-only
@@ -189,17 +200,28 @@ with "Start in" set to this folder.
   against. The "All listings" search tab ignores every slider, so it's
   the way to look at everything regardless of what's filtered.
 - **The cog** (next to those sliders) opens a second row with the
-  finer-grained filters: minimum size, and a lowest/highest floor range
-  (floor 0 = *bottenvåning*). They behave the same way — "Any" until you pull
-  one in — and while any of them is engaged the cog shows an amber count, so
-  you can collapse the panel without forgetting the map is still narrowed.
-  "Reset these" clears just that row.
+  finer-grained filters: minimum size, a lowest/highest floor range
+  (floor 0 = *bottenvåning*), minimum contract length, and an **Elström**
+  requirement. The sliders behave the same way as the main ones — "Any" until
+  you pull one in — and while any cog filter is engaged the cog shows an amber
+  count, so you can collapse the panel without forgetting the map is still
+  narrowed. "Reset these" clears just that row.
+  - *Min contract* uses SSSB's "Max N år" badge, which caps how long you may
+    hold the contract. Only a stated cap **below** your minimum is excluded;
+    listings with no stated cap always pass, since no cap is the better case.
+    In practice SSSB only ever seems to print "Max 4 år", so this slider
+    mostly acts as a switch between "include those" and "exclude those".
+  - *Elström* is the one filter that deliberately hides unknowns: it keeps
+    only listings whose card explicitly says "Elström ingår" (48 of 76 in a
+    real scrape). Cards that say nothing about electricity — and every
+    Bostadsförmedlingen ad, which has no such field — drop out while it's on.
+    That's the point of it being an explicit opt-in rather than a slider.
 - **No elevator filter**: SSSB's vacancy list doesn't publish whether a
   building has a lift — the card only carries type, address, area, size,
-  rent, move-in date, queue days and floor. Adding one would mean opening
-  each listing's own page during every scrape (76 extra page loads), and
-  it's not confirmed that page states it either. The floor sliders are the
-  practical stand-in for "no walk-up".
+  rent, move-in date, queue days, floor, and the two badges above. Adding one
+  would mean opening each listing's own page during every scrape (76 extra
+  page loads), and it's not confirmed that page states it either. The floor
+  sliders are the practical stand-in for "no walk-up".
 - **If SSSB changes their site**, the selectors in step 3 are the only
   place you should need to touch.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
