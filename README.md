@@ -180,6 +180,14 @@ with "Start in" set to this folder.
   Resrobot, otherwise the bike estimate). Flemingsberg in particular is
   quite far from central KTH — it'll likely get filtered out by default,
   which is probably what you want.
+- **Queue-days and rent sliders**: next to "Max commute". Both start at
+  "Any" (hiding nothing) and filter individual listings rather than whole
+  areas, so the counts on the map roundels drop as you pull them down and an
+  area shows the gray × once nothing in it still qualifies. Bostadsförmedlingen
+  ads are never hidden by the queue-days slider — they publish an application
+  deadline instead of a queue-days figure, so there's nothing to compare
+  against. The "All listings" search tab ignores all three sliders, so it's
+  the way to look at everything regardless of what's filtered.
 - **If SSSB changes their site**, the selectors in step 3 are the only
   place you should need to touch.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —

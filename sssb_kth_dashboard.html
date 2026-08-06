@@ -86,8 +86,14 @@
     color:var(--paper-dim);
   }
   .slider-row{display:flex;align-items:center;gap:8px;}
-  .slider-row span{font-family:var(--mono);font-size:12px;min-width:52px;}
-  input[type=range]{width:140px;accent-color:var(--line-north);}
+  .slider-row span{
+    font-family:var(--mono);font-size:11.5px;min-width:68px;
+    font-variant-numeric:tabular-nums;
+  }
+  /* "Any" = filter parked at its max, i.e. hiding nothing — dimmed so an
+     active limit is visually obvious across three sliders at a glance. */
+  .slider-row span.any{color:var(--paper-dim);}
+  input[type=range]{width:122px;accent-color:var(--line-north);}
 
   .legend{display:flex;gap:10px;flex-wrap:wrap;}
   .legend button{
@@ -159,6 +165,9 @@
     color:var(--paper-dim);
     text-align:right;
     line-height:1.5;
+    /* Stays at the far right whether it shares the top row with the filters
+       or gets wrapped onto a line of its own. */
+    margin-left:auto;
   }
 
   /* ── Main layout ─────────────────────────────────────── */
@@ -377,6 +386,22 @@
   </div>
 
   <div class="control">
+    <label>Max queue days</label>
+    <div class="slider-row">
+      <input type="range" id="maxQueue" min="0" max="2000" value="2000" step="50">
+      <span id="maxQueueLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <div class="control">
+    <label>Max rent</label>
+    <div class="slider-row">
+      <input type="range" id="maxRent" min="3000" max="13000" value="13000" step="250">
+      <span id="maxRentLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <div class="control">
     <label>Provider</label>
     <div class="legend" id="providerChips">
       <button data-p="SSSB"><span class="sw"></span>SSSB</button>
@@ -513,6 +538,9 @@ const METRO_LINES = [
 const activeGroups = new Set(['North','South','City']);
 const activeProviders = new Set(['SSSB','Bostadsförmedlingen']);
 let maxCommuteMin = 45;
+// null = slider parked at its max, i.e. no limit ("Any").
+let maxQueueDays = null;
+let maxRentSek = null;
 let currentData = null;
 let selectedArea = null;   // SSSB area name, or null
 let markers = [];
@@ -581,6 +609,21 @@ function listingCommute(l){
   return commuteMinutes(l);
 }
 
+// Per-listing queue-days / rent filters, applied to the map roundel counts,
+// the BF pins and the sidebar list alike so the three always agree.
+// A missing value never hides a listing: Bostadsförmedlingen publishes no
+// queue-days figure at all, so filtering on it would silently drop that
+// whole provider rather than narrowing it.
+function passesFilters(l){
+  if (maxQueueDays !== null && l.queue_days != null && l.queue_days > maxQueueDays) return false;
+  if (maxRentSek !== null && l.rent_sek != null && Number(l.rent_sek) > maxRentSek) return false;
+  return true;
+}
+
+function filtersActive(){
+  return maxQueueDays !== null || maxRentSek !== null;
+}
+
 function render(){
   renderMeta();
   renderMap();
@@ -610,7 +653,15 @@ function visibleSssbAreaNames(){
 function visibleBfListings(){
   if (!activeProviders.has('Bostadsförmedlingen')) return [];
   return currentData.listings.filter(l =>
-    l.provider === 'Bostadsförmedlingen' && listingCommute(l) <= maxCommuteMin);
+    l.provider === 'Bostadsförmedlingen' && listingCommute(l) <= maxCommuteMin && passesFilters(l));
+}
+
+// SSSB listings in one area that survive the queue-days / rent sliders —
+// this is what the area's roundel counts, so dragging a slider visibly
+// empties areas out on the map.
+function sssbListingsInArea(name){
+  return currentData.listings.filter(l =>
+    l.provider === 'SSSB' && l.area === name && passesFilters(l));
 }
 
 let leafletMap;
@@ -654,7 +705,7 @@ function renderMap(){
     Object.entries(currentData.areas).forEach(([name, area]) => {
       if (!area.coords) return;
       const isVisible = visible.has(name);
-      const count = currentData.listings.filter(l => l.provider === 'SSSB' && l.area === name).length;
+      const count = sssbListingsInArea(name).length;
       const isEmpty = count === 0;
       const color = isEmpty ? 'var(--empty-gray)' : (LINE_COLORS[area.group] || '#888');
       const size = isEmpty ? 16 : 14 + Math.min(count, 6) * 3;
@@ -669,7 +720,8 @@ function renderMap(){
       if (count > 0) {
         marker.bindTooltip(`${name} · ${count} available`, { direction:'top' });
       } else {
-        marker.bindTooltip(`${name} · none available`, { direction:'top', opacity:0.7 });
+        marker.bindTooltip(`${name} · ${filtersActive() ? 'none match your filters' : 'none available'}`,
+                           { direction:'top', opacity:0.7 });
       }
       markers.push(marker);
     });
@@ -840,21 +892,27 @@ function renderSidebar(){
       <h2 id="panelTitle">${selectedArea} <span style="color:var(--paper-dim);font-weight:400;font-size:12px;">· ${area.group} line · SSSB</span></h2>
       <div class="stats-row">${fmtCommute(area)}</div>
     `;
-    rows = currentData.listings.filter(l => l.provider === 'SSSB' && l.area === selectedArea);
+    rows = sssbListingsInArea(selectedArea);
   } else {
-    header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">within ${maxCommuteMin} min · SSSB sorted by queue days, BF by deadline</div>`;
     const visibleAreas = new Set(visibleSssbAreaNames());
     const bfVisible = new Set(visibleBfListings().map(l => l.id));
     rows = currentData.listings.filter(l =>
-      (l.provider === 'SSSB' && activeProviders.has('SSSB') && visibleAreas.has(l.area)) ||
+      (l.provider === 'SSSB' && activeProviders.has('SSSB') && visibleAreas.has(l.area) && passesFilters(l)) ||
       (l.provider === 'Bostadsförmedlingen' && bfVisible.has(l.id))
     );
+    const bits = [`within ${maxCommuteMin} min`];
+    if (maxQueueDays !== null) bits.push(`≤${maxQueueDays.toLocaleString()} queue days`);
+    if (maxRentSek !== null) bits.push(`≤${maxRentSek.toLocaleString()} kr`);
+    bits.push('SSSB sorted by queue days, BF by deadline');
+    header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">${bits.join(' · ')}</div>`;
   }
 
   rows = sortListings(rows);
 
   if (rows.length === 0) {
-    list.innerHTML = `<div class="empty-state">No available listings here right now.<br>Leave the local script running — you'll get a notification the moment something is published.</div>`;
+    list.innerHTML = filtersActive()
+      ? `<div class="empty-state">Nothing matches your filters.<br>Try raising the queue-days or rent slider.</div>`
+      : `<div class="empty-state">No available listings here right now.<br>Leave the local script running — you'll get a notification the moment something is published.</div>`;
     return;
   }
 
@@ -874,6 +932,25 @@ document.getElementById('maxCommute').addEventListener('input', (e) => {
   document.getElementById('maxCommuteLabel').textContent = maxCommuteMin + ' min';
   render();
 });
+
+// Both of these treat the slider's top end as "no limit" rather than a
+// literal ceiling, so nothing is hidden until you actually pull one down.
+function bindLimitSlider(inputId, labelId, format, setValue){
+  const input = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+  input.addEventListener('input', (e) => {
+    const raw = Number(e.target.value);
+    const atMax = raw >= Number(input.max);
+    setValue(atMax ? null : raw);
+    label.textContent = atMax ? 'Any' : format(raw);
+    label.classList.toggle('any', atMax);
+    render();
+  });
+}
+bindLimitSlider('maxQueue', 'maxQueueLabel',
+  v => v.toLocaleString() + ' d', v => { maxQueueDays = v; });
+bindLimitSlider('maxRent', 'maxRentLabel',
+  v => v.toLocaleString() + ' kr', v => { maxRentSek = v; });
 
 document.getElementById('legend').addEventListener('click', (e) => {
   const btn = e.target.closest('button');
