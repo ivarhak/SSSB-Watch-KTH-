@@ -1,15 +1,14 @@
-# ── Core: needed by every mode, including phone/tablet (--http-only) ──
 requests>=2.31
 beautifulsoup4>=4.12
 flask>=3.0
 flask-cors>=4.0
 
-# ── Desktop only: the Selenium fallback, used if SSSB's vacancy list ever
-#    stops being readable over plain HTTP. Skip these on a phone.
+# The Selenium fallback, used when SSSB's vacancy list can't be read over
+# plain HTTP. Needs Chrome/Chromium installed.
 selenium>=4.20
 webdriver-manager>=4.0
 
-# ── Optional niceties: desktop notifications + OS-keychain credential storage.
-#    Both are imported lazily, so the tool runs fine without them.
+# Desktop notifications, and OS-keychain credential storage for the
+# --with-login fallback. Both imported lazily, so neither is load-bearing.
 plyer>=2.1
 keyring>=24.0

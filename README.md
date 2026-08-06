@@ -16,16 +16,17 @@ Two pieces:
 - `sssb_kth_monitor.py` — runs on your machine: Selenium scraping for SSSB, a plain HTTP fetch for Bostadsförmedlingen, commute math, and a small local API.
 - `sssb_kth_dashboard.html` — the UI. Served by the script itself, so it's all same-origin (no CORS headaches).
 
-## 1. Why this runs locally
+## 1. Why this runs on your laptop
 
-It's a local script mainly because it's a personal tool that watches your
-queues and pops desktop notifications — there's no server to pay for and no
-account to log into.
+It's a personal tool that watches your queues and pops desktop notifications,
+so it lives on your machine — no server to pay for, nothing to deploy. It also
+keeps Chrome available as a fallback for reading SSSB's listing page, which is
+rendered by their JavaScript app rather than served as plain HTML.
 
-It is *not* locked to a desktop, though. Neither source needs credentials, and
-`--http-only` reads both of them without a browser, so it runs anywhere Python
-does — see "Running it on a phone" in section 4. Chrome is only a fallback for
-the case where SSSB's page turns out to need JavaScript to render its listings.
+This is deliberately a laptop tool. Running it on a phone was tried and
+abandoned: iOS suspends background processes, so the dashboard's local server
+dies the moment you switch to Safari, and working around that added more
+complexity than the convenience was worth.
 
 ## 2. Setup
 
@@ -39,10 +40,9 @@ pip install -r requirements.txt
 
 There might be some other modules you need, simply pip install when your computer says you dont have them
 
-Chrome (or Chromium) only matters for the Selenium fallback — if you have it,
-`webdriver-manager` fetches the matching driver automatically. On a phone,
-where there's no Chrome to drive, install just the core dependencies and use
-`--http-only` (see section 4).
+Chrome (or Chromium) needs to be installed — `webdriver-manager` handles the
+matching driver automatically. It's only used as a fallback (see "How it reads
+SSSB" in section 4), but keep it around so that fallback is there.
 
 That's the whole setup — there's no login step. Cron and Task Scheduler runs
 need nothing extra either, since nothing prompts for input.
@@ -134,57 +134,18 @@ instead of waiting for the next scheduled one.
 > works served from `http://localhost:5055` since that's what makes the
 > `/api/...` calls same-origin.
 
-### Running it on a phone (no Chrome anywhere)
+### How it reads SSSB
 
-Because SSSB's vacancy list is public and Bostadsförmedlingen is already a
-plain JSON feed, the whole tool can run with no browser at all:
+A normal run first tries reading the vacancy list with a plain HTTP request,
+and only launches Chrome if that comes back empty — which makes the usual case
+noticeably faster, since no browser has to start at all. You don't need to
+think about this; it's automatic.
 
-```bash
-python sssb_kth_monitor.py --serve --http-only
-```
-
-`--http-only` reads SSSB with an ordinary HTTP GET instead of driving Chrome,
-so **nothing** needs Selenium. Both providers stay live and the dashboard is
-served at http://localhost:5055 exactly as on a desktop. Install only the
-core dependencies:
-
-```bash
-pip install requests beautifulsoup4 flask flask-cors
-```
-
-Where to run it:
-- **iPhone** — [a-Shell](https://apps.apple.com/app/a-shell/id1473805438) (free);
-  `pip install` works inside it.
-- **Android** — Pydroid 3, or Termux from F-Droid (`pkg install python`).
-
-**On iOS, use `--export` instead of `--serve`.** iOS suspends a backgrounded
-app, so a Flask server started in a terminal app dies the moment you switch to
-Safari to look at it. Instead:
-
-```bash
-python sssb_kth_monitor.py --export --http-only
-```
-
-That scrapes once and writes `dashboard_snapshot.html` — the whole dashboard
-with the data baked in, openable straight from the Files app with no server
-involved. Every filter, the map and the search all work; only the "Refresh
-listings" button is disabled (there's nothing to refresh against), and a banner
-shows when the snapshot was taken. Re-run the command to update it.
-
-Two caveats. `--http-only` only works if the listings are present in the raw
-HTML rather than being drawn in by SSSB's JavaScript; if they aren't, the run
-tells you so and prints any API-looking URLs it spotted in the page, since one
-of those is probably the endpoint the page calls (paste them into a chat and
-the scraper can target it directly). And desktop notifications via `plyer`
-don't work on mobile — new listings still show up as NEW tags in the dashboard.
-
-On a desktop you don't need the flag: a normal run tries the HTTP path first
-anyway (it's much faster than launching Chrome) and falls back to Selenium by
-itself if the page turns out to need a real browser.
-
-**Only want Bostadsförmedlingen?** `--bf-only` skips SSSB altogether, fetching
-BF live and reusing the last saved SSSB listings from
-`data/current_listings.json`. Useful as a fallback if the SSSB side ever breaks.
+`--http-only` forces the fast path and fails loudly instead of falling back,
+which is handy for checking whether it still works. If the page ever does need
+a real browser, that run tells you so and prints any API-looking URLs it found
+in the page, since one of those is probably the endpoint the page fetches its
+listings from.
 
 ## 5. Getting notified automatically
 

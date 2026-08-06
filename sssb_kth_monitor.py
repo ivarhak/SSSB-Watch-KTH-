@@ -26,9 +26,7 @@ is still an open question; see CLAUDE.md.
 Usage:
     python sssb_kth_monitor.py --once           # one scrape, save + notify, exit
     python sssb_kth_monitor.py --serve          # run scrape + start local API/dashboard server
-    python sssb_kth_monitor.py --http-only      # no browser at all (phone mode)
-    python sssb_kth_monitor.py --export         # write a standalone HTML snapshot, no server needed
-    python sssb_kth_monitor.py --bf-only        # skip SSSB, Bostadsförmedlingen only
+    python sssb_kth_monitor.py --http-only      # no browser: fail instead of falling back to Selenium
     python sssb_kth_monitor.py --debug          # also dump rendered HTML to debug_page.html
     python sssb_kth_monitor.py --with-login     # only if SSSB starts requiring a login again
 """
@@ -79,8 +77,6 @@ DATA_DIR.mkdir(exist_ok=True)
 CURRENT_FILE = DATA_DIR / "current_listings.json"
 GEOCODE_CACHE_FILE = DATA_DIR / "geocode_cache.json"
 DEBUG_HTML_FILE = Path(__file__).parent / "debug_page.html"
-DASHBOARD_FILE = Path(__file__).parent / "sssb_kth_dashboard.html"
-STATIC_EXPORT_FILE = Path(__file__).parent / "dashboard_snapshot.html"
 
 PORT = int(os.environ.get("PORT", 5055))
 
@@ -1001,14 +997,13 @@ def fetch_bostadsformedlingen() -> list[dict]:
     return listings
 
 
-def run_scrape(debug: bool = False, bf_only: bool = False, use_login: bool = False,
+def run_scrape(debug: bool = False, use_login: bool = False,
                http_only: bool = False) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug, bf_only=bf_only, use_login=use_login,
-                                http_only=http_only)
+        return _run_scrape_impl(debug=debug, use_login=use_login, http_only=http_only)
 
 
-def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool = False,
+def _run_scrape_impl(debug: bool = False, use_login: bool = False,
                      http_only: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
@@ -1027,47 +1022,35 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool
                 "transit_min": real_transit_time(coords) if coords else None,
             }
 
-    if bf_only:
-        # No browser available (e.g. running on a phone/tablet interpreter):
-        # skip Selenium entirely and carry the last saved SSSB listings over
-        # unchanged, so the dashboard still shows both providers. Older saved
-        # files predate the provider field — tag those on the way through.
-        print("(--bf-only: skipping the SSSB browser scrape — reusing last saved SSSB listings)")
-        sssb_listings = [l for l in previous["listings"] if l.get("provider", "SSSB") == "SSSB"]
-        for l in sssb_listings:
-            l.setdefault("provider", "SSSB")
-            l.setdefault("landlord", "SSSB")
-    else:
-        sssb_listings = None
-        # Try the browserless path first: it's much faster than launching Chrome
-        # and it's the only one that works where Chrome doesn't exist. Falls
-        # through to Selenium if the raw HTML turns out to be a JS shell.
-        if not use_login:
-            sssb_listings = fetch_sssb_http(debug=debug)
-            if sssb_listings is None and http_only:
-                raise SystemExit(
-                    "--http-only was requested but the vacancy list couldn't be read without a "
-                    "browser (see the diagnostics above). Drop --http-only to fall back to "
-                    "Selenium, or use --bf-only to skip SSSB entirely."
-                )
-        elif http_only:
-            raise SystemExit("--http-only and --with-login are contradictory: logging in needs a browser.")
+    sssb_listings = None
+    # Try the plain-HTTP path first: it's much faster than launching Chrome and
+    # doesn't depend on a working driver. Falls through to Selenium if the raw
+    # HTML turns out to be a JS shell.
+    if not use_login:
+        sssb_listings = fetch_sssb_http(debug=debug)
+        if sssb_listings is None and http_only:
+            raise SystemExit(
+                "--http-only was requested but the vacancy list couldn't be read without a "
+                "browser (see the diagnostics above). Drop --http-only to fall back to Selenium."
+            )
+    elif http_only:
+        raise SystemExit("--http-only and --with-login are contradictory: logging in needs a browser.")
 
-        if sssb_listings is None:
-            print("falling back to the browser..." if not use_login
-                  else "launching browser + logging in...")
-            driver = init_driver(headless=not debug)
-            try:
-                if use_login:
-                    login(driver)
-                print("scraping listings...")
-                sssb_listings = scrape_listings(driver, debug=debug)
-            finally:
-                driver.quit()
+    if sssb_listings is None:
+        print("falling back to the browser..." if not use_login
+              else "launching browser + logging in...")
+        driver = init_driver(headless=not debug)
+        try:
+            if use_login:
+                login(driver)
+            print("scraping listings...")
+            sssb_listings = scrape_listings(driver, debug=debug)
+        finally:
+            driver.quit()
 
-        for l in sssb_listings:
-            l["provider"] = "SSSB"
-            l["landlord"] = "SSSB"
+    for l in sssb_listings:
+        l["provider"] = "SSSB"
+        l["landlord"] = "SSSB"
 
     bf_listings = fetch_bostadsformedlingen()
     for l in bf_listings:
@@ -1093,41 +1076,9 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool
     return result
 
 
-# ── Static export ────────────────────────────────────────────────────────
-
-def export_static_dashboard(result: dict, out_path: Path) -> Path:
-    """Write a single self-contained HTML file with this scrape's data inlined.
-
-    Opened straight from the filesystem — no Flask, no localhost. That matters
-    on a phone: iOS suspends a backgrounded process, so a server started in a
-    terminal app dies the moment you switch to the browser to look at it. A
-    plain file has no such problem. Leaflet and the fonts still come from their
-    CDNs, so viewing it needs a connection (but not a server).
-    """
-    html = DASHBOARD_FILE.read_text(encoding="utf-8")
-    # "</" is escaped so a stray closing tag inside the data can't terminate
-    # the <script> block early.
-    payload = json.dumps(result, ensure_ascii=False).replace("</", "<\\/")
-    inject = f"<script>window.__SSSB_DATA__ = {payload};</script>\n"
-
-    marker = '<script src="https://cdnjs'
-    if marker not in html:
-        raise SystemExit(
-            f"Couldn't find the Leaflet <script> tag in {DASHBOARD_FILE.name} to inject before — "
-            "the dashboard's markup must have changed; update export_static_dashboard()."
-        )
-    html = html.replace(marker, inject + marker, 1)
-
-    out_path.write_text(html, encoding="utf-8")
-    listings = result.get("listings", [])
-    print(f"\nWrote {out_path} ({out_path.stat().st_size:,} bytes, {len(listings)} listing(s))")
-    print("Open that file in a browser — it needs no server. Re-run this command to refresh it.")
-    return out_path
-
-
 # ── Local API + dashboard server ─────────────────────────────────────────
 
-def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_login: bool = False,
+def _background_poll_loop(interval_minutes: float, use_login: bool = False,
                           http_only: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
@@ -1137,14 +1088,14 @@ def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_lo
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only)
+            run_scrape(use_login=use_login, http_only=http_only)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
-def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = False,
+def serve(interval_minutes: float, use_login: bool = False,
           http_only: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
@@ -1164,14 +1115,14 @@ def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = Fals
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only))
+        return jsonify(run_scrape(use_login=use_login, http_only=http_only))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only))
+        return jsonify(run_scrape(use_login=use_login, http_only=http_only))
 
     threading.Thread(target=_background_poll_loop,
-                     args=(interval_minutes, bf_only, use_login, http_only), daemon=True).start()
+                     args=(interval_minutes, use_login, http_only), daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -1185,18 +1136,10 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="scrape once, save, notify, exit")
     parser.add_argument("--serve", action="store_true", help="start local dashboard + API server")
     parser.add_argument("--interval", type=float, default=15, help="minutes between auto-checks in --serve mode (default: 15)")
-    parser.add_argument("--bf-only", action="store_true",
-                        help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
-                             "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
-                             "the last saved SSSB listings")
-    parser.add_argument("--export", nargs="?", const=str(STATIC_EXPORT_FILE), metavar="PATH",
-                        help="scrape once, then write a self-contained HTML snapshot (default: "
-                             "dashboard_snapshot.html) you can open straight from the filesystem with no "
-                             "server running. The recommended way to view this on a phone")
     parser.add_argument("--http-only", action="store_true",
                         help="never launch a browser: read SSSB over plain HTTP and fail loudly if that "
-                             "isn't possible. This is the phone/tablet mode — combined with the fact that "
-                             "Bostadsförmedlingen is already a plain JSON feed, it needs no Chrome at all")
+                             "isn't possible, instead of quietly falling back to Selenium. Useful for "
+                             "checking whether the fast path still works")
     parser.add_argument("--with-login", action="store_true",
                         help="log in before scraping. Not needed — the vacancy list, queue days included, is "
                              "public (confirmed 2026-08-06). Use this only if SSSB starts hiding listings or "
@@ -1211,20 +1154,16 @@ if __name__ == "__main__":
     elif args.login:
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
-    elif args.export:
-        result = run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
-                            http_only=args.http_only)
-        export_static_dashboard(result, Path(args.export))
     elif args.once:
-        run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
+        run_scrape(debug=args.debug, use_login=args.with_login,
                    http_only=args.http_only)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
-            run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
+            run_scrape(debug=args.debug, use_login=args.with_login,
                        http_only=args.http_only)
-        serve(interval_minutes=args.interval, bf_only=args.bf_only, use_login=args.with_login,
+        serve(interval_minutes=args.interval, use_login=args.with_login,
               http_only=args.http_only)
     else:
         parser.print_help()
