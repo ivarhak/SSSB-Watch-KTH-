@@ -466,6 +466,50 @@ const OTHER_SCHOOLS = [
   { name: 'Royal Institute of Art', coords: [59.32458, 18.08213] },
 ];
 const LINE_COLORS = { North: '#4C9FE8', South: '#E0596B', City: '#3FBF8F' };
+// Stockholm metro (tunnelbana) drawn station-to-station in each line's real
+// SL color — reference geography only, not clickable (interactive:false so
+// it never swallows a click meant for an area roundel underneath).
+// Segments are ordered station coordinate runs; branches are separate runs.
+const METRO_LINES = [
+  { name: 'Green line (T17–T19)', color: '#179C4A', segments: [
+    [ // trunk: Alvik → city → Skärmarbrink → Farsta direction
+      [59.33345,17.98014],[59.33290,18.00301],[59.33130,18.01540],[59.33220,18.02910],
+      [59.33950,18.03690],[59.34280,18.04960],[59.34070,18.05920],[59.33550,18.06350],
+      [59.33130,18.05930],[59.32320,18.06720],[59.31990,18.07200],[59.31430,18.07350],
+      [59.30780,18.07550],[59.29900,18.08050],[59.29510,18.09000],[59.29000,18.08760],
+      [59.28460,18.09250],[59.27750,18.09660],
+    ],
+    [ // Skarpnäck branch
+      [59.29510,18.09000],[59.29390,18.10390],[59.29110,18.11650],[59.28430,18.11510],
+    ],
+    [ // Hagsätra branch
+      [59.29900,18.08050],[59.29390,18.07680],[59.28930,18.07200],[59.28390,18.06840],
+    ],
+  ]},
+  { name: 'Red line (T13–T14)', color: '#D71D24', segments: [
+    [ // Mörby centrum → city → Fruängen direction
+      [59.39860,18.03650],[59.39230,18.04160],[59.38120,18.03690],[59.36540,18.05480],
+      [59.34590,18.07160],[59.34280,18.08210],[59.33520,18.07450],[59.33130,18.05930],
+      [59.32320,18.06720],[59.31990,18.07200],[59.31700,18.06320],[59.31780,18.05030],
+      [59.31590,18.03420],[59.31030,18.02270],[59.30160,18.01190],[59.29830,17.99730],
+    ],
+    [ // Ropsten branch
+      [59.33520,18.07450],[59.33900,18.09190],[59.34680,18.09990],[59.35730,18.10290],
+    ],
+    [ // Norsborg direction from Liljeholmen
+      [59.31030,18.02270],[59.30650,18.00990],[59.30530,17.99920],
+    ],
+  ]},
+  { name: 'Blue line (T10–T11)', color: '#0080C8', segments: [
+    [ // Kungsträdgården → Västra skogen → Akalla direction
+      [59.33070,18.06850],[59.33130,18.05930],[59.33000,18.04200],[59.33220,18.02910],
+      [59.33720,18.01580],[59.34750,18.00370],[59.36170,17.99860],[59.37060,17.99900],
+    ],
+    [ // Hjulsta direction from Västra skogen
+      [59.34750,18.00370],[59.34990,17.98620],[59.35480,17.97370],
+    ],
+  ]},
+];
 const activeGroups = new Set(['North','South','City']);
 const activeProviders = new Set(['SSSB','Bostadsförmedlingen']);
 let maxCommuteMin = 45;
@@ -576,6 +620,15 @@ function initMap(){
     maxZoom: 18
   }).addTo(leafletMap);
 
+  METRO_LINES.forEach(line => {
+    line.segments.forEach(seg => {
+      L.polyline(seg, {
+        color: line.color, weight: 3, opacity: 0.55, interactive: false,
+        lineJoin: 'round', lineCap: 'round',
+      }).addTo(leafletMap);
+    });
+  });
+
   const kthIcon = L.divIcon({ className:'', html:'<div class="kth-pulse"></div>', iconSize:[16,16] });
   L.marker(KTH, { icon: kthIcon }).addTo(leafletMap).bindTooltip('KTH', {permanent:false, direction:'top'});
 
@@ -608,7 +661,7 @@ function renderMap(){
 
       const icon = L.divIcon({
         className:'',
-        html:`<div class="area-roundel" style="width:${size}px;height:${size}px;background:${isVisible?color:'#334'};color:${isEmpty?'#fff':'#0a1726'};font-size:${isEmpty?11:10}px;font-weight:700;opacity:${isVisible?1:0.35}">${isEmpty ? '×' : count}</div>`,
+        html:`<div class="area-roundel" style="width:${size}px;height:${size}px;background:${isVisible?color:'#334'};color:${isEmpty?'#fff':'#0a1726'};font-size:10px;font-weight:700;opacity:${isVisible?1:0.35}">${count}</div>`,
         iconSize:[size,size],
       });
       const marker = L.marker(area.coords, { icon }).addTo(leafletMap);
