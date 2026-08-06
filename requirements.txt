@@ -1,13 +1,15 @@
-# Core — always needed (this is all --bf-only mode needs)
+# ── Core: needed by every mode, including phone/tablet (--http-only) ──
 requests>=2.31
+beautifulsoup4>=4.12
 flask>=3.0
 flask-cors>=4.0
 
-# SSSB scraping — desktop only, needs Chrome; skip these with --bf-only
+# ── Desktop only: the Selenium fallback, used if SSSB's vacancy list ever
+#    stops being readable over plain HTTP. Skip these on a phone.
 selenium>=4.20
 webdriver-manager>=4.0
-beautifulsoup4>=4.12
 
-# Optional niceties — desktop notifications + OS-keychain credential storage
+# ── Optional niceties: desktop notifications + OS-keychain credential storage.
+#    Both are imported lazily, so the tool runs fine without them.
 plyer>=2.1
 keyring>=24.0

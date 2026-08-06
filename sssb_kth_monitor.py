@@ -652,6 +652,165 @@ def _parse_card_fields(card_text: str):
     return (housing_type, queue_days, rent_sek, size_sqm, floor, *extras)
 
 
+
+def _decode_response(resp) -> str:
+    """Decode an HTTP response to text, preferring UTF-8 over requests' default.
+
+    Necessary, not cosmetic: when a server sends `Content-Type: text/html` with
+    no charset, requests falls back to ISO-8859-1 per the HTTP spec, which turns
+    this page's Swedish into mojibake — "kök" → "kÃ¶k", "m²" → "mÂ²", and the
+    non-breaking space inside "7 218 kr" into "Â ". That silently broke the
+    card regexes and produced a rent of 218 kr instead of 7218. Confirmed
+    against a fixture built from real scraped cards.
+    """
+    declared = "charset" in (resp.headers.get("content-type") or "").lower()
+    if declared and resp.encoding:
+        return resp.text
+    for enc in ("utf-8", resp.apparent_encoding, "iso-8859-1"):
+        if not enc:
+            continue
+        try:
+            return resp.content.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return resp.content.decode("utf-8", "replace")
+
+
+def _refid_links_from_html(html: str) -> dict:
+    """Every real-listing link in a page of HTML, keyed by absolute URL.
+
+    Shared by the Selenium path (which passes `driver.page_source`) and the
+    browserless path (which passes the raw response body) so both get
+    identical parsing.
+    """
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    out = {}
+    for a in soup.select("a[href]"):
+        href = a["href"]
+        if "refid=" not in href:
+            continue
+        url = href if href.startswith("http") else "https://minasidor.sssb.se" + href
+        out.setdefault(url, a)
+    return out
+
+
+def _expected_total_from_html(html: str) -> int | None:
+    """SSSB shows "Shown X - Y of Z vacant homes" (Swedish: "Visas X - Y av Z
+    lediga bostäder") — grab Z if we can, purely to report whether we got
+    everything."""
+    try:
+        m = re.search(r"(?:of|av)\s+(\d+)\s+(?:vacant|lediga)", html, re.IGNORECASE)
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+def _listings_from_links(links_by_url: dict, expected_total: int | None) -> list[dict]:
+    """Parse + report on a set of `refid=` links. Kept verbose on purpose —
+    this project gets debugged from terminal output alone."""
+    listing_links = list(links_by_url.items())
+    print(f"  found {len(listing_links)} unique link(s) containing 'refid='")
+
+    listings = [_parse_listing_from_link(link, url) for url, link in listing_links]
+    unknown_area_count = sum(1 for l in listings if l["area"] == "Unknown")
+
+    print(f"  parsed {len(listings)} listing(s):")
+    for l in listings:
+        print(f"    [{l['area']}] queue_days={l['queue_days']} rent={l['rent_sek']} "
+              f"size={l['size_sqm']} floor={l['floor']} max_years={l['max_years']} "
+              f"el={l['el_included']} :: {l['raw_text'][:90]}")
+
+    if len(listing_links) == 0:
+        print("  ! No 'refid=' links found at all — either 0 listings are published right "
+              "now, or SSSB's link format changed. Run --debug and grep debug_page.html "
+              "for 'refid=' to confirm which.")
+    if expected_total and len(listing_links) < expected_total:
+        print(f"  ! Only found {len(listing_links)} of an expected ~{expected_total}.")
+    if unknown_area_count:
+        print(f"  ! {unknown_area_count} listing(s) didn't match a known area name — the "
+              "surrounding-text heuristic may be grabbing the wrong ancestor for those. Check "
+              "the raw_text above.")
+
+    missing_queue = sum(1 for l in listings if l["queue_days"] is None)
+    if listings and missing_queue > len(listings) // 2:
+        print(f"  ! {missing_queue} of {len(listings)} listing(s) have no queue-days figure. The "
+              "'Ködagar' column was confirmed public in Aug 2026, so if this run wasn't already "
+              "using --with-login, try that — SSSB may have moved it back behind a login (the "
+              "dashboard sorts SSSB rows by queue days, so without it that ordering is meaningless).")
+
+    return listings
+
+
+# URL fragments worth reporting if the raw HTML turns out to be a JS shell —
+# whatever endpoint the page fetches its data from is the thing to scrape next.
+_ENDPOINT_HINT_RE = re.compile(
+    r"[\"\x27(]([^\"\x27()\s]*(?:api|json|ajax|handler|\.asmx|/Lista/|sok|search)"
+    r"[^\"\x27()\s]*)", re.IGNORECASE)
+
+
+def fetch_sssb_http(debug: bool = False) -> list[dict] | None:
+    """Read the SSSB vacancy list with a plain HTTP GET — no browser at all.
+
+    This is what makes the tool runnable somewhere Chrome doesn't exist (a
+    phone, a small server). It only works if the listings are present in the
+    raw HTML rather than being drawn in later by SSSB's JS; returns None if
+    they aren't, so the caller can fall back to Selenium. On that failure it
+    prints any API-ish URLs found in the page, since one of them is likely the
+    endpoint the JS calls — which would be the better thing to scrape.
+    """
+    print("fetching SSSB vacancy list over plain HTTP (no browser)...")
+    try:
+        resp = requests.get(
+            LISTINGS_URL,
+            headers={
+                # SSSB serves the list to logged-out visitors; a browser-ish UA
+                # just avoids being treated as a bot.
+                "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"),
+                "Accept-Language": "sv,en;q=0.8",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        html = _decode_response(resp)
+    except requests.RequestException as e:
+        print(f"  ! HTTP fetch failed ({e})")
+        return None
+
+    print(f"  got {len(html):,} chars (HTTP {resp.status_code}, final URL {resp.url})")
+    if debug:
+        DEBUG_HTML_FILE.write_text(html, encoding="utf-8")
+        print(f"  wrote raw HTML to {DEBUG_HTML_FILE} for inspection")
+
+    if "/login" in resp.url:
+        print("  ! redirected to a login page — the list isn't public after all; "
+              "use --with-login (which needs Chrome).")
+        return None
+
+    links = _refid_links_from_html(html)
+    if not links:
+        placeholders = html.count("{{")
+        print(f"  ! no 'refid=' links in the raw HTML ({placeholders} '{{{{' template "
+              "placeholder(s) found) — the page is drawn by JavaScript, so this "
+              "browserless path can't read it.")
+        candidates = sorted(set(_ENDPOINT_HINT_RE.findall(html)))[:25]
+        if candidates:
+            print("  Candidate data endpoints spotted in the page — one of these is probably "
+                  "what its JS calls for the listings:")
+            for c in candidates:
+                print(f"    {c}")
+            print("  Paste that list into the chat and the scraper can target it directly, "
+                  "which would drop the browser requirement for good.")
+        return None
+
+    expected_total = _expected_total_from_html(html)
+    if expected_total:
+        print(f"  page reports ~{expected_total} vacant home(s) in total")
+    return _listings_from_links(links, expected_total)
+
+
 def scrape_listings(driver, debug: bool = False) -> list[dict]:
     """Scrape currently published listings.
 
@@ -670,8 +829,6 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
     the surrounding text (rent, size, queue days, area).
     """
     from selenium.webdriver.support.ui import WebDriverWait
-    from bs4 import BeautifulSoup
-    import re
 
     driver.get(LISTINGS_URL)
 
@@ -685,26 +842,14 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
 
     time.sleep(2)  # small buffer for any trailing async rendering
 
-    # SSSB shows "Shown X - Y of Z vacant homes" (or, on the Swedish URL we
-    # now use, "Visas X - Y av Z lediga bostäder") — grab Z if we can, just
-    # to tell you at the end whether we actually got everything.
-    expected_total = None
-    try:
-        m = re.search(r"(?:of|av)\s+(\d+)\s+(?:vacant|lediga)", driver.page_source, re.IGNORECASE)
-        if m:
-            expected_total = int(m.group(1))
-    except Exception:
-        pass
+    expected_total = _expected_total_from_html(driver.page_source)
 
     all_links_by_url = {}
     for page_num in range(1, 26):  # hard cap so a broken "next" click can't loop forever
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        page_links = [a for a in soup.select("a[href]") if "refid=" in a["href"]]
+        page_links = _refid_links_from_html(driver.page_source)
 
         new_count = 0
-        for a in page_links:
-            href = a["href"]
-            url = href if href.startswith("http") else "https://minasidor.sssb.se" + href
+        for url, a in page_links.items():
             if url not in all_links_by_url:
                 all_links_by_url[url] = a
                 new_count += 1
@@ -726,39 +871,7 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
             break
         time.sleep(2)  # let new content render before the next pass
 
-    listing_links = list(all_links_by_url.items())
-    print(f"  found {len(listing_links)} unique link(s) containing 'refid=' across all pages")
-
-    listings = [_parse_listing_from_link(link, url) for url, link in listing_links]
-    unknown_area_count = sum(1 for l in listings if l["area"] == "Unknown")
-
-    print(f"  parsed {len(listings)} listing(s):")
-    for l in listings:
-        print(f"    [{l['area']}] queue_days={l['queue_days']} rent={l['rent_sek']} "
-              f"size={l['size_sqm']} floor={l['floor']} max_years={l['max_years']} "
-              f"el={l['el_included']} :: {l['raw_text'][:90]}")
-
-    if len(listing_links) == 0:
-        print("  ! No 'refid=' links found at all — either 0 listings are published right "
-              "now, or SSSB's link format differs from the example you gave me. Run --debug "
-              "and grep debug_page.html for 'refid=' to confirm which.")
-    if expected_total and len(listing_links) < expected_total:
-        print(f"  ! Only found {len(listing_links)} of an expected ~{expected_total} — the "
-              "next/load-more click isn't fully working. Run --debug and watch the browser "
-              "to see what the pagination control actually looks like.")
-    if unknown_area_count:
-        print(f"  ! {unknown_area_count} listing(s) didn't match a known area name — the "
-              "surrounding-text heuristic may be grabbing the wrong ancestor for those. Check "
-              "the raw_text above; paste one here and I can adjust it.")
-
-    missing_queue = sum(1 for l in listings if l["queue_days"] is None)
-    if listings and missing_queue > len(listings) // 2:
-        print(f"  ! {missing_queue} of {len(listings)} listing(s) have no queue-days figure. The "
-              "'Ködagar' column was confirmed public in Aug 2026, so if this run wasn't already "
-              "using --with-login, try that — SSSB may have moved it back behind a login (the "
-              "dashboard sorts SSSB rows by queue days, so without it that ordering is meaningless).")
-
-    return listings
+    return _listings_from_links(all_links_by_url, expected_total)
 
 
 
@@ -884,12 +997,15 @@ def fetch_bostadsformedlingen() -> list[dict]:
     return listings
 
 
-def run_scrape(debug: bool = False, bf_only: bool = False, use_login: bool = False) -> dict:
+def run_scrape(debug: bool = False, bf_only: bool = False, use_login: bool = False,
+               http_only: bool = False) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug, bf_only=bf_only, use_login=use_login)
+        return _run_scrape_impl(debug=debug, bf_only=bf_only, use_login=use_login,
+                                http_only=http_only)
 
 
-def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool = False) -> dict:
+def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool = False,
+                     http_only: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
@@ -918,17 +1034,33 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool
             l.setdefault("provider", "SSSB")
             l.setdefault("landlord", "SSSB")
     else:
-        print("launching browser + logging in..." if use_login else "launching browser...")
-        driver = init_driver(headless=not debug)
-        try:
-            if use_login:
-                login(driver)
-            else:
-                print("(reading the public vacancy list — no login needed; --with-login overrides)")
-            print("scraping listings...")
-            sssb_listings = scrape_listings(driver, debug=debug)
-        finally:
-            driver.quit()
+        sssb_listings = None
+        # Try the browserless path first: it's much faster than launching Chrome
+        # and it's the only one that works where Chrome doesn't exist. Falls
+        # through to Selenium if the raw HTML turns out to be a JS shell.
+        if not use_login:
+            sssb_listings = fetch_sssb_http(debug=debug)
+            if sssb_listings is None and http_only:
+                raise SystemExit(
+                    "--http-only was requested but the vacancy list couldn't be read without a "
+                    "browser (see the diagnostics above). Drop --http-only to fall back to "
+                    "Selenium, or use --bf-only to skip SSSB entirely."
+                )
+        elif http_only:
+            raise SystemExit("--http-only and --with-login are contradictory: logging in needs a browser.")
+
+        if sssb_listings is None:
+            print("falling back to the browser..." if not use_login
+                  else "launching browser + logging in...")
+            driver = init_driver(headless=not debug)
+            try:
+                if use_login:
+                    login(driver)
+                print("scraping listings...")
+                sssb_listings = scrape_listings(driver, debug=debug)
+            finally:
+                driver.quit()
+
         for l in sssb_listings:
             l["provider"] = "SSSB"
             l["landlord"] = "SSSB"
@@ -959,7 +1091,8 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool
 
 # ── Local API + dashboard server ─────────────────────────────────────────
 
-def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_login: bool = False):
+def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_login: bool = False,
+                          http_only: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -968,14 +1101,15 @@ def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_lo
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(bf_only=bf_only, use_login=use_login)
+            run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
-def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = False):
+def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = False,
+          http_only: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -994,14 +1128,14 @@ def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = Fals
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login))
+        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login))
+        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login, http_only=http_only))
 
     threading.Thread(target=_background_poll_loop,
-                     args=(interval_minutes, bf_only, use_login), daemon=True).start()
+                     args=(interval_minutes, bf_only, use_login, http_only), daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -1019,6 +1153,10 @@ if __name__ == "__main__":
                         help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
                              "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
                              "the last saved SSSB listings")
+    parser.add_argument("--http-only", action="store_true",
+                        help="never launch a browser: read SSSB over plain HTTP and fail loudly if that "
+                             "isn't possible. This is the phone/tablet mode — combined with the fact that "
+                             "Bostadsförmedlingen is already a plain JSON feed, it needs no Chrome at all")
     parser.add_argument("--with-login", action="store_true",
                         help="log in before scraping. Not needed — the vacancy list, queue days included, is "
                              "public (confirmed 2026-08-06). Use this only if SSSB starts hiding listings or "
@@ -1034,13 +1172,16 @@ if __name__ == "__main__":
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
     elif args.once:
-        run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login)
+        run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
+                   http_only=args.http_only)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
-            run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login)
-        serve(interval_minutes=args.interval, bf_only=args.bf_only, use_login=args.with_login)
+            run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
+                       http_only=args.http_only)
+        serve(interval_minutes=args.interval, bf_only=args.bf_only, use_login=args.with_login,
+              http_only=args.http_only)
     else:
         parser.print_help()
         sys.exit(1)
