@@ -820,12 +820,12 @@ def fetch_bostadsformedlingen() -> list[dict]:
     return listings
 
 
-def run_scrape(debug: bool = False) -> dict:
+def run_scrape(debug: bool = False, bf_only: bool = False) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug)
+        return _run_scrape_impl(debug=debug, bf_only=bf_only)
 
 
-def _run_scrape_impl(debug: bool = False) -> dict:
+def _run_scrape_impl(debug: bool = False, bf_only: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
@@ -843,17 +843,28 @@ def _run_scrape_impl(debug: bool = False) -> dict:
                 "transit_min": real_transit_time(coords) if coords else None,
             }
 
-    print("launching browser + logging in...")
-    driver = init_driver(headless=not debug)
-    try:
-        login(driver)
-        print("scraping listings...")
-        sssb_listings = scrape_listings(driver, debug=debug)
-    finally:
-        driver.quit()
-    for l in sssb_listings:
-        l["provider"] = "SSSB"
-        l["landlord"] = "SSSB"
+    if bf_only:
+        # No browser available (e.g. running on a phone/tablet interpreter):
+        # skip Selenium entirely and carry the last saved SSSB listings over
+        # unchanged, so the dashboard still shows both providers. Older saved
+        # files predate the provider field — tag those on the way through.
+        print("(--bf-only: skipping the SSSB browser scrape — reusing last saved SSSB listings)")
+        sssb_listings = [l for l in previous["listings"] if l.get("provider", "SSSB") == "SSSB"]
+        for l in sssb_listings:
+            l.setdefault("provider", "SSSB")
+            l.setdefault("landlord", "SSSB")
+    else:
+        print("launching browser + logging in...")
+        driver = init_driver(headless=not debug)
+        try:
+            login(driver)
+            print("scraping listings...")
+            sssb_listings = scrape_listings(driver, debug=debug)
+        finally:
+            driver.quit()
+        for l in sssb_listings:
+            l["provider"] = "SSSB"
+            l["landlord"] = "SSSB"
 
     bf_listings = fetch_bostadsformedlingen()
     for l in bf_listings:
@@ -881,7 +892,7 @@ def _run_scrape_impl(debug: bool = False) -> dict:
 
 # ── Local API + dashboard server ─────────────────────────────────────────
 
-def _background_poll_loop(interval_minutes: float):
+def _background_poll_loop(interval_minutes: float, bf_only: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -890,14 +901,14 @@ def _background_poll_loop(interval_minutes: float):
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape()
+            run_scrape(bf_only=bf_only)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
-def serve(interval_minutes: float):
+def serve(interval_minutes: float, bf_only: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -916,13 +927,13 @@ def serve(interval_minutes: float):
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape())
+        return jsonify(run_scrape(bf_only=bf_only))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape())
+        return jsonify(run_scrape(bf_only=bf_only))
 
-    threading.Thread(target=_background_poll_loop, args=(interval_minutes,), daemon=True).start()
+    threading.Thread(target=_background_poll_loop, args=(interval_minutes, bf_only), daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -936,6 +947,10 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="scrape once, save, notify, exit")
     parser.add_argument("--serve", action="store_true", help="start local dashboard + API server")
     parser.add_argument("--interval", type=float, default=15, help="minutes between auto-checks in --serve mode (default: 15)")
+    parser.add_argument("--bf-only", action="store_true",
+                        help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
+                             "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
+                             "the last saved SSSB listings")
     parser.add_argument("--debug", action="store_true", help="run visible browser + dump debug_page.html")
     args = parser.parse_args()
 
@@ -945,13 +960,13 @@ if __name__ == "__main__":
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
     elif args.once:
-        run_scrape(debug=args.debug)
+        run_scrape(debug=args.debug, bf_only=args.bf_only)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
-            run_scrape(debug=args.debug)
-        serve(interval_minutes=args.interval)
+            run_scrape(debug=args.debug, bf_only=args.bf_only)
+        serve(interval_minutes=args.interval, bf_only=args.bf_only)
     else:
         parser.print_help()
         sys.exit(1)

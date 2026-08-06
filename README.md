@@ -138,6 +138,18 @@ instead of waiting for the next scheduled one.
 > works served from `http://localhost:5055` since that's what makes the
 > `/api/...` calls same-origin.
 
+**No Chrome available?** (phone/tablet Python interpreters, minimal servers):
+```bash
+python sssb_kth_monitor.py --serve --bf-only
+```
+`--bf-only` skips the SSSB browser scrape entirely — no Selenium, no Chrome,
+no login, no keyring — so the only packages it needs are `requests`, `flask`
+and `flask-cors`. It fetches Bostadsförmedlingen live, reuses the last saved
+SSSB listings from `data/current_listings.json` (run a full scrape on a real
+computer now and then to refresh those), and serves the same dashboard at
+http://localhost:5055. Desktop notifications via `plyer` generally don't work
+on mobile — new-listing detection still shows up as NEW tags in the dashboard.
+
 ## 5. Getting notified automatically
 
 If you leave `python sssb_kth_monitor.py --serve` running, you're already

@@ -1,8 +1,13 @@
-selenium>=4.20
-webdriver-manager>=4.0
-beautifulsoup4>=4.12
+# Core — always needed (this is all --bf-only mode needs)
 requests>=2.31
 flask>=3.0
 flask-cors>=4.0
+
+# SSSB scraping — desktop only, needs Chrome; skip these with --bf-only
+selenium>=4.20
+webdriver-manager>=4.0
+beautifulsoup4>=4.12
+
+# Optional niceties — desktop notifications + OS-keychain credential storage
 plyer>=2.1
 keyring>=24.0
