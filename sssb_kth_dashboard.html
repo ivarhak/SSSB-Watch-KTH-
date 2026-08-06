@@ -174,10 +174,6 @@
   .legend button[data-g="City"] .sw{background:var(--line-city);}
   .legend button[data-p="SSSB"] .sw{background:var(--line-city);}
   .legend button[data-p="Bostadsförmedlingen"] .sw{background:var(--bf-purple);}
-  /* Opt-in requirement rather than a category toggle, so it reads as amber
-     (same colour as the cog's badge) and starts off. */
-  .legend button[data-x] .sw{background:var(--amber);}
-  .legend button[data-x]:focus-visible{outline:2px solid var(--line-north);outline-offset:2px;}
 
   #browseAllBtn{
     font-family:var(--mono);
@@ -542,18 +538,10 @@
     </div>
   </div>
 
-  <div class="control">
-    <label>Must include</label>
-    <div class="legend" id="extraChips">
-      <button data-x="el" class="off" aria-pressed="false"><span class="sw"></span>Elström</button>
-    </div>
-  </div>
-
   <button id="advReset">Reset these</button>
 
-  <div class="adv-hint">Floor 0 is <em>bottenvåning</em>.
-    <strong>Elström</strong> keeps only listings that say <em>Elström ingår</em> — silent
-    ones and all BF ads drop out while it's on.</div>
+  <div class="adv-hint">Floor 0 is <em>bottenvåning</em>. "Min contract" only excludes
+    listings that state a <em>Max N år</em> cap below it — no stated cap always passes.</div>
 </div>
 
 <main>
@@ -661,9 +649,6 @@ let minSizeSqm = null;
 let minFloor = null;
 let maxFloor = null;
 let minYears = null;
-// The one filter that deliberately DOES hide unknowns: it's an explicit
-// "only if the listing says so" requirement, not a range.
-let requireEl = false;
 let currentData = null;
 let selectedArea = null;   // SSSB area name, or null
 let markers = [];
@@ -749,15 +734,13 @@ function passesFilters(l){
   // "Max N år" is a cap on the contract, so only a stated cap below the
   // requested minimum disqualifies — no stated cap is the better case.
   if (minYears !== null && l.max_years != null && Number(l.max_years) < minYears) return false;
-  if (requireEl && l.el_included !== true) return false;
   return true;
 }
 
 // Which of the cog's filters are engaged — drives the badge on the cog so
 // collapsing the panel can't hide the fact that it's still narrowing things.
 function advancedActiveCount(){
-  return [minSizeSqm, minFloor, maxFloor, minYears].filter(v => v !== null).length
-       + (requireEl ? 1 : 0);
+  return [minSizeSqm, minFloor, maxFloor, minYears].filter(v => v !== null).length;
 }
 
 function filtersActive(){
@@ -1060,7 +1043,6 @@ function renderSidebar(){
     else if (minFloor !== null) bits.push(`floor ${floorLabel(minFloor)}+`);
     else if (maxFloor !== null) bits.push(`floor ≤${floorLabel(maxFloor)}`);
     if (minYears !== null) bits.push(`${minYears}+ år contract`);
-    if (requireEl) bits.push('el included');
     bits.push('SSSB sorted by queue days, BF by deadline');
     header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">${bits.join(' · ')}</div>`;
   }
@@ -1126,16 +1108,6 @@ const advSliders = [
     { kind:'min', format: v => v + ' år+', set: v => { minYears = v; } }),
 ];
 
-document.getElementById('extraChips').addEventListener('click', (e) => {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  requireEl = btn.classList.contains('off');
-  btn.classList.toggle('off', !requireEl);
-  btn.setAttribute('aria-pressed', String(requireEl));
-  refreshAdvBadge();
-  render();
-});
-
 function refreshAdvBadge(){
   const n = advancedActiveCount();
   const badge = document.getElementById('advCount');
@@ -1157,11 +1129,6 @@ document.getElementById('advReset').addEventListener('click', () => {
   advSliders.forEach(s => {
     s.input.value = s.input.getAttribute('value');
     s.apply();
-  });
-  requireEl = false;
-  document.querySelectorAll('#extraChips button').forEach(b => {
-    b.classList.add('off');
-    b.setAttribute('aria-pressed', 'false');
   });
   refreshAdvBadge();
   render();

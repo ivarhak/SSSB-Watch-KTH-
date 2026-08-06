@@ -3,35 +3,32 @@
 SSSB → KTH Commute Monitor
 ===========================
 
-Logs into SSSB (minasidor.sssb.se), scrapes currently available student
-housing listings, works out how far each SSSB area is from KTH (both a
-rough straight-line estimate and a real public-transit time via Trafiklab's
-Resrobot API), diffs against the last run to spot newly-published listings,
-fires a desktop notification when something new shows up, and serves it
-all to the dashboard (sssb_kth_dashboard.html) over a tiny local API.
+Scrapes SSSB's currently available student housing (minasidor.sssb.se) plus
+Bostadsförmedlingen's public student ads, works out how far each place is from
+KTH (both a rough straight-line estimate and a real public-transit time via
+Trafiklab's Resrobot API), diffs against the last run to spot newly-published
+listings, fires a desktop notification when something new shows up, and serves
+it all to the dashboard (sssb_kth_dashboard.html) over a tiny local API.
 
-WHY SELENIUM: SSSB's listings page renders its content client-side after
-login (the raw HTML is just template placeholders until their JS app runs),
-and there is no documented public API for it, so a real browser is used to
-render the page before parsing it.
+NO LOGIN NEEDED: SSSB's vacancy list is public — confirmed 2026-08-06,
+queue days ("Ködagar") included. Nothing here asks for credentials by
+default. `--with-login` still exists as an escape hatch if SSSB ever puts the
+list back behind a login, in which case `--login` stores credentials in your
+OS keychain (macOS Keychain / Windows Credential Locker / Linux Secret
+Service via `keyring`) rather than any file that could end up in a commit.
 
-BEFORE YOU RUN THIS: the CSS selectors in `scrape_listings()` and `login()`
-are my best guess at SSSB's markup — I can't load minasidor.sssb.se myself
-to verify them (it's behind login and outside what I can reach from here).
-Run once with `--debug` first; see README.md "Fixing the selectors" section.
-
-CREDENTIALS: your SSSB username/password are never stored in this project
-folder. The first time they're needed, you'll be prompted for them, with
-the option to save them in your OS's own keychain (macOS Keychain / Windows
-Credential Locker / Linux Secret Service via the `keyring` library) instead
-of any file that could end up in a git commit. See `--login` / `--forget-login`.
+WHY SELENIUM: the listings page renders its content client-side (the raw HTML
+is just template placeholders until their JS app runs), so a real browser is
+used to render the page before parsing it. Whether the underlying data is
+reachable as plain JSON — which would drop the browser requirement entirely —
+is still an open question; see CLAUDE.md.
 
 Usage:
-    python sssb_kth_monitor.py --login          # store SSSB credentials in your OS keychain
-    python sssb_kth_monitor.py --forget-login   # remove them again
     python sssb_kth_monitor.py --once           # one scrape, save + notify, exit
     python sssb_kth_monitor.py --serve          # run scrape + start local API/dashboard server
+    python sssb_kth_monitor.py --bf-only        # no browser at all: Bostadsförmedlingen only
     python sssb_kth_monitor.py --debug          # also dump rendered HTML to debug_page.html
+    python sssb_kth_monitor.py --with-login     # only if SSSB starts requiring a login again
 """
 
 import argparse
@@ -404,18 +401,19 @@ def _click(driver, element):
 
 
 def login(driver):
-    """Log into minasidor.sssb.se.
+    """Log into minasidor.sssb.se. NOT called unless you pass --with-login.
 
     Ivar confirmed (2026-08-06) that the vacancy list renders fine in a
-    logged-out private tab, so logging in may not be needed to read listings
-    at all — see `--no-login`, which skips this entirely. Kept as the default
-    because it's unconfirmed whether the "Ködagar" (queue days) column, which
-    the whole sorting story depends on, is shown to logged-out visitors.
+    logged-out private tab, queue days ("Ködagar") included, so scraping needs
+    no credentials at all and this is skipped by default. It's kept only as an
+    escape hatch in case SSSB puts the list back behind a login.
 
-    CONFIGURABLE: field selectors below are a best guess (SSSB commonly uses
-    a personnummer + password form). If login fails, run with --debug, open
-    debug_page.html, right-click the username/password fields → Inspect, and
-    update the `By.CSS_SELECTOR` values below to match.
+    CONFIGURABLE, AND STILL UNVERIFIED: the field selectors below are a best
+    guess (SSSB commonly uses a personnummer + password form) and have never
+    been checked against real markup — nobody has needed to run this path. If
+    it fails, run with --debug --with-login, open debug_page.html, right-click
+    the username/password fields → Inspect, and update the `By.CSS_SELECTOR`
+    values below to match.
     """
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
@@ -755,10 +753,10 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
 
     missing_queue = sum(1 for l in listings if l["queue_days"] is None)
     if listings and missing_queue > len(listings) // 2:
-        print(f"  ! {missing_queue} of {len(listings)} listing(s) have no queue-days figure. If "
-              "this run used --no-login, that's the answer: SSSB only shows 'Ködagar' to "
-              "logged-in visitors, so drop --no-login to get it back (the dashboard sorts SSSB "
-              "rows by queue days, so without it that ordering is meaningless).")
+        print(f"  ! {missing_queue} of {len(listings)} listing(s) have no queue-days figure. The "
+              "'Ködagar' column was confirmed public in Aug 2026, so if this run wasn't already "
+              "using --with-login, try that — SSSB may have moved it back behind a login (the "
+              "dashboard sorts SSSB rows by queue days, so without it that ordering is meaningless).")
 
     return listings
 
@@ -886,12 +884,12 @@ def fetch_bostadsformedlingen() -> list[dict]:
     return listings
 
 
-def run_scrape(debug: bool = False, bf_only: bool = False, no_login: bool = False) -> dict:
+def run_scrape(debug: bool = False, bf_only: bool = False, use_login: bool = False) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug, bf_only=bf_only, no_login=no_login)
+        return _run_scrape_impl(debug=debug, bf_only=bf_only, use_login=use_login)
 
 
-def _run_scrape_impl(debug: bool = False, bf_only: bool = False, no_login: bool = False) -> dict:
+def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
@@ -920,13 +918,13 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, no_login: bool 
             l.setdefault("provider", "SSSB")
             l.setdefault("landlord", "SSSB")
     else:
-        print("launching browser..." if no_login else "launching browser + logging in...")
+        print("launching browser + logging in..." if use_login else "launching browser...")
         driver = init_driver(headless=not debug)
         try:
-            if no_login:
-                print("(--no-login: skipping the login step — reading the public vacancy list)")
-            else:
+            if use_login:
                 login(driver)
+            else:
+                print("(reading the public vacancy list — no login needed; --with-login overrides)")
             print("scraping listings...")
             sssb_listings = scrape_listings(driver, debug=debug)
         finally:
@@ -961,7 +959,7 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, no_login: bool 
 
 # ── Local API + dashboard server ─────────────────────────────────────────
 
-def _background_poll_loop(interval_minutes: float, bf_only: bool = False, no_login: bool = False):
+def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_login: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -970,14 +968,14 @@ def _background_poll_loop(interval_minutes: float, bf_only: bool = False, no_log
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(bf_only=bf_only, no_login=no_login)
+            run_scrape(bf_only=bf_only, use_login=use_login)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
-def serve(interval_minutes: float, bf_only: bool = False, no_login: bool = False):
+def serve(interval_minutes: float, bf_only: bool = False, use_login: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -996,14 +994,14 @@ def serve(interval_minutes: float, bf_only: bool = False, no_login: bool = False
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape(bf_only=bf_only, no_login=no_login))
+        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape(bf_only=bf_only, no_login=no_login))
+        return jsonify(run_scrape(bf_only=bf_only, use_login=use_login))
 
     threading.Thread(target=_background_poll_loop,
-                     args=(interval_minutes, bf_only, no_login), daemon=True).start()
+                     args=(interval_minutes, bf_only, use_login), daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -1021,10 +1019,12 @@ if __name__ == "__main__":
                         help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
                              "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
                              "the last saved SSSB listings")
+    parser.add_argument("--with-login", action="store_true",
+                        help="log in before scraping. Not needed — the vacancy list, queue days included, is "
+                             "public (confirmed 2026-08-06). Use this only if SSSB starts hiding listings or "
+                             "the Ködagar column behind a login again")
     parser.add_argument("--no-login", action="store_true",
-                        help="skip the SSSB login and read the public vacancy list (confirmed to render "
-                             "logged-out). Still needs Chrome. Warns loudly if queue days come back empty, "
-                             "which would mean SSSB only shows those to logged-in visitors")
+                        help="(now the default; accepted for compatibility and does nothing)")
     parser.add_argument("--debug", action="store_true", help="run visible browser + dump debug_page.html")
     args = parser.parse_args()
 
@@ -1034,13 +1034,13 @@ if __name__ == "__main__":
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
     elif args.once:
-        run_scrape(debug=args.debug, bf_only=args.bf_only, no_login=args.no_login)
+        run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
-            run_scrape(debug=args.debug, bf_only=args.bf_only, no_login=args.no_login)
-        serve(interval_minutes=args.interval, bf_only=args.bf_only, no_login=args.no_login)
+            run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login)
+        serve(interval_minutes=args.interval, bf_only=args.bf_only, use_login=args.with_login)
     else:
         parser.print_help()
         sys.exit(1)

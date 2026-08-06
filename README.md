@@ -1,12 +1,16 @@
 # SSSB → KTH housing finder
 
-A local tool that logs into SSSB, checks what student housing is currently
-available, works out the commute to KTH for each area, and shows it all on
-a map — sorted by ascending queue days, with a refresh button and a desktop
+A local tool that checks what SSSB student housing is currently available,
+works out the commute to KTH for each area, and shows it all on a map —
+sorted by ascending queue days, with a refresh button and a desktop
 notification when something new gets published. It also pulls in Stockholm's
 **Bostadsförmedlingen** listings alongside SSSB's — that's where Svenska
 Bostäder advertises its student apartments, and it needs no login at all
 (it's a public JSON feed).
+
+**No SSSB login required either.** The vacancy list is public — queue days
+included — so out of the box this asks for no credentials at all. There's a
+`--with-login` escape hatch if SSSB ever changes that; see section 3.
 
 Two pieces:
 - `sssb_kth_monitor.py` — runs on your machine: Selenium scraping for SSSB, a plain HTTP fetch for Bostadsförmedlingen, commute math, and a small local API.
@@ -14,11 +18,14 @@ Two pieces:
 
 ## 1. Why this needs to run on your machine
 
-SSSB's listings only render after you're logged in, and the content is
-loaded by their JavaScript app rather than being present in the raw page —
-so this needs a real (automated) browser, not a simple web request. There's
-also no public API for it, so this can't run as a hosted web app — it has
-to run locally.
+SSSB's listing content is loaded by their JavaScript app rather than being
+present in the raw page, so reading it needs a real (automated) browser
+rather than a simple web request — which is what keeps this a local script
+instead of a hosted web app.
+
+(If it turns out the underlying data is fetchable as plain JSON, the browser
+requirement disappears and this could run anywhere, phone included. That's an
+open question — see "Known limitations" at the bottom.)
 
 ## 2. Setup
 
@@ -35,10 +42,13 @@ There might be some other modules you need, simply pip install when your compute
 Chrome (or Chromium) needs to be installed — `webdriver-manager` handles the
 matching driver automatically.
 
-### Logging in
+That's the whole setup — there's no login step. Cron and Task Scheduler runs
+need nothing extra either, since nothing prompts for input.
 
-Your SSSB username/password are **never written to a file in this project
-folder**. Instead:
+<details>
+<summary>If SSSB ever starts requiring a login again</summary>
+
+Pass `--with-login`, and store credentials first with:
 
 ```bash
 python sssb_kth_monitor.py --login
@@ -47,23 +57,20 @@ python sssb_kth_monitor.py --login
 This prompts for your username and password (password input is hidden) and
 asks if you want to save them to your computer's own secure keychain —
 macOS Keychain, Windows Credential Locker, or Linux Secret Service,
-depending on your OS, via the `keyring` package. If you say no, or skip
-`--login` entirely, you'll just get the same prompt every time `--debug` or
-`--serve` needs to log in — nothing is stored anywhere.
+depending on your OS, via the `keyring` package. They are **never written to
+a file in this project folder**. `--forget-login` removes them again.
 
-To remove saved credentials later:
-```bash
-python sssb_kth_monitor.py --forget-login
-```
+For unattended runs where there's no terminal to prompt on and no keyring
+daemon (a headless Linux box, say), set `SSSB_USERNAME`/`SSSB_PASSWORD` as
+environment variables in the crontab entry itself — the script reads those as
+a fallback. That's fine security-wise since your crontab isn't part of this
+project folder; just don't put those `export` lines in a script that lives in
+here.
 
-> **Unattended `--once` runs (cron, Task Scheduler):** there's no terminal to
-> prompt on, so run `--login` once by hand first — cron will then silently
-> read from your OS keychain. On a headless Linux box without a keyring
-> daemon running (gnome-keyring/kwallet), that may not work — in that case,
-> set `SSSB_USERNAME`/`SSSB_PASSWORD` directly as environment variables in
-> the crontab entry itself (the script checks for these as a fallback). That's
-> fine security-wise since your crontab isn't part of this project folder —
-> just don't put those `export` lines in a script that lives in here.
+Note that `login()`'s field selectors have never been verified against SSSB's
+real markup, because nobody has needed this path. If it fails, run
+`--debug --with-login` and fix the selectors from `debug_page.html`.
+</details>
 
 Optional, for **real transit times** (otherwise you'll just get the
 straight-line/bike estimate): get a free key for the **Resrobot** API at
@@ -74,47 +81,34 @@ add the "Resrobot v2.1" API), then:
 export RESROBOT_API_KEY="your key"
 ```
 
-## 3. Fixing the selectors (important — do this first)
+## 3. If the scrape ever comes back empty
 
-I wrote `login()` and `scrape_listings()` in `sssb_kth_monitor.py` from
-general knowledge of how these portals are usually built, since I can't
-load minasidor.sssb.se myself (it's behind login and outside what I can
-reach from here). They're probably *close* but not exact. To fix them:
+`scrape_listings()` finds real listings by looking for links containing
+`refid=` in the URL (confirmed against a real SSSB booking link), then reads
+the area/rent/size/queue-days/floor values out of the surrounding card text.
+If it ever comes back empty while you can see real listings on the site
+yourself:
 
 ```bash
 python sssb_kth_monitor.py --debug
 ```
 
-This runs a **visible** browser window (so you can watch what happens) and
-saves the fully-rendered page to `debug_page.html`. If login fails, open
-`debug_page.html` (or just watch the browser window), right-click the
-username/password fields on minasidor.sssb.se → **Inspect**, and update the
-`By.CSS_SELECTOR` values in `login()` to match.
+That runs a **visible** browser window (so you can watch what happens) and
+saves the fully-rendered page to `debug_page.html`. Check whether that file
+actually contains `refid=` anywhere (`grep -c "refid=" debug_page.html`) — if
+SSSB changed their link format, that's the thing to update.
 
-`scrape_listings()` finds real listings by looking for links containing
-`refid=` in the URL (confirmed against a real SSSB booking link), then reads
-the rent/size/queue-days text from a few levels up the DOM from each one —
-so it shouldn't need hand-editing the way `login()` might. If it ever comes
-back empty while you can see real listings on the site yourself, run
-`--debug` and check whether `debug_page.html` actually contains `refid=`
-anywhere (`grep -c "refid=" debug_page.html`) — if SSSB changes their link
-format, that's the thing to update.
+If instead the run reports listings but with empty queue days, SSSB may have
+moved the "Ködagar" column behind a login again; try `--with-login` (see the
+collapsed section above). The scrape prints a warning telling you so.
 
-This is a five-minute fix once you can see the real markup — I just
-couldn't do that part myself.
-
-This section is SSSB-specific — Bostadsförmedlingen needs no selector
-fixing since `fetch_bostadsformedlingen()` reads a plain JSON feed rather
-than scraped markup. If its field names ever drift, the terminal prints
-the first ad's actual keys on every run, so you can fix the candidate
-names in `_bf_field()` from that alone.
+Bostadsförmedlingen needs no selector fixing at all, since
+`fetch_bostadsformedlingen()` reads a plain JSON feed rather than scraped
+markup. If its field names ever drift, the terminal prints the first ad's
+actual keys on every run, so you can fix the candidate names in `_bf_field()`
+from that alone.
 
 ## 4. Running it
-
-**First time only** — store your login (see "Logging in" above):
-```bash
-python sssb_kth_monitor.py --login
-```
 
 **One-off check** (scrapes once, saves, notifies if there's something new, exits):
 ```bash
@@ -137,17 +131,6 @@ instead of waiting for the next scheduled one.
 > Claude) shows example data with a banner saying so — the live version only
 > works served from `http://localhost:5055` since that's what makes the
 > `/api/...` calls same-origin.
-
-**Don't want to log in?** Ivar confirmed the vacancy list renders fine in a
-logged-out private tab, so:
-```bash
-python sssb_kth_monitor.py --serve --no-login
-```
-skips the login step entirely — no credentials, no keyring, and none of the
-login-selector fragility described in section 3. It still needs Chrome. The
-one open question is whether SSSB shows the **Ködagar** (queue days) column to
-logged-out visitors; if it doesn't, the run prints a loud warning and you
-should drop the flag, since the dashboard sorts SSSB listings by queue days.
 
 **No Chrome available?** (phone/tablet Python interpreters, minimal servers):
 ```bash
@@ -201,21 +184,22 @@ with "Start in" set to this folder.
   the way to look at everything regardless of what's filtered.
 - **The cog** (next to those sliders) opens a second row with the
   finer-grained filters: minimum size, a lowest/highest floor range
-  (floor 0 = *bottenvåning*), minimum contract length, and an **Elström**
-  requirement. The sliders behave the same way as the main ones — "Any" until
-  you pull one in — and while any cog filter is engaged the cog shows an amber
-  count, so you can collapse the panel without forgetting the map is still
-  narrowed. "Reset these" clears just that row.
+  (floor 0 = *bottenvåning*), and minimum contract length. They behave the
+  same way as the main sliders — "Any" until you pull one in — and while any
+  cog filter is engaged the cog shows an amber count, so you can collapse the
+  panel without forgetting the map is still narrowed. "Reset these" clears
+  just that row.
   - *Min contract* uses SSSB's "Max N år" badge, which caps how long you may
     hold the contract. Only a stated cap **below** your minimum is excluded;
     listings with no stated cap always pass, since no cap is the better case.
     In practice SSSB only ever seems to print "Max 4 år", so this slider
     mostly acts as a switch between "include those" and "exclude those".
-  - *Elström* is the one filter that deliberately hides unknowns: it keeps
-    only listings whose card explicitly says "Elström ingår" (48 of 76 in a
-    real scrape). Cards that say nothing about electricity — and every
-    Bostadsförmedlingen ad, which has no such field — drop out while it's on.
-    That's the point of it being an explicit opt-in rather than a slider.
+- **Electricity** is shown, not filtered on. Cards that say "Elström ingår"
+  display *el ingår* in the listing row (and it's searchable in the "All
+  listings" tab), but there's no toggle for it: a card saying nothing about
+  electricity isn't the same as one that excludes it, and Bostadsförmedlingen
+  ads have no such field at all, so a filter would have quietly dropped that
+  entire provider.
 - **No elevator filter**: SSSB's vacancy list doesn't publish whether a
   building has a lift — the card only carries type, address, area, size,
   rent, move-in date, queue days, floor, and the two badges above. Adding one
