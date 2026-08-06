@@ -157,6 +157,20 @@ Where to run it:
   `pip install` works inside it.
 - **Android** — Pydroid 3, or Termux from F-Droid (`pkg install python`).
 
+**On iOS, use `--export` instead of `--serve`.** iOS suspends a backgrounded
+app, so a Flask server started in a terminal app dies the moment you switch to
+Safari to look at it. Instead:
+
+```bash
+python sssb_kth_monitor.py --export --http-only
+```
+
+That scrapes once and writes `dashboard_snapshot.html` — the whole dashboard
+with the data baked in, openable straight from the Files app with no server
+involved. Every filter, the map and the search all work; only the "Refresh
+listings" button is disabled (there's nothing to refresh against), and a banner
+shows when the snapshot was taken. Re-run the command to update it.
+
 Two caveats. `--http-only` only works if the listings are present in the raw
 HTML rather than being drawn in by SSSB's JavaScript; if they aren't, the run
 tells you so and prints any API-looking URLs it spotted in the page, since one

@@ -689,8 +689,25 @@ function showBanner(text){
   b.style.display = 'block';
 }
 
+// A static export (see --export) inlines its data here and is opened straight
+// from the filesystem, with no server to fetch from — handy on a phone, where
+// the OS suspends a backgrounded Flask process the moment you switch to the
+// browser.
+const STATIC_DATA = window.__SSSB_DATA__ || null;
+
 async function loadData(triggerRefresh){
   const btn = document.getElementById('refreshBtn');
+  if (STATIC_DATA) {
+    currentData = STATIC_DATA;
+    const when = new Date(STATIC_DATA.generated_at).toLocaleString([], {
+      hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'});
+    showBanner(`Saved snapshot from ${when} — re-run the script to refresh it.`);
+    btn.disabled = true;
+    btn.style.opacity = 0.45;
+    btn.style.cursor = 'default';
+    render();
+    return;
+  }
   if (triggerRefresh) btn.classList.add('spinning');
   try {
     const url = triggerRefresh ? '/api/refresh' : '/api/listings';
@@ -1162,7 +1179,8 @@ loadData(false);
 // Pick up whatever the background --serve auto-check produces, without
 // needing a manual click or page reload. This just reads the cached
 // /api/listings (cheap) — it does NOT trigger a new scrape itself.
-setInterval(() => loadData(false), 60000);
+// Pointless in a static export, where there's no server to poll.
+if (!STATIC_DATA) setInterval(() => loadData(false), 60000);
 </script>
 </body>
 </html>

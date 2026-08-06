@@ -26,7 +26,9 @@ is still an open question; see CLAUDE.md.
 Usage:
     python sssb_kth_monitor.py --once           # one scrape, save + notify, exit
     python sssb_kth_monitor.py --serve          # run scrape + start local API/dashboard server
-    python sssb_kth_monitor.py --bf-only        # no browser at all: Bostadsförmedlingen only
+    python sssb_kth_monitor.py --http-only      # no browser at all (phone mode)
+    python sssb_kth_monitor.py --export         # write a standalone HTML snapshot, no server needed
+    python sssb_kth_monitor.py --bf-only        # skip SSSB, Bostadsförmedlingen only
     python sssb_kth_monitor.py --debug          # also dump rendered HTML to debug_page.html
     python sssb_kth_monitor.py --with-login     # only if SSSB starts requiring a login again
 """
@@ -77,6 +79,8 @@ DATA_DIR.mkdir(exist_ok=True)
 CURRENT_FILE = DATA_DIR / "current_listings.json"
 GEOCODE_CACHE_FILE = DATA_DIR / "geocode_cache.json"
 DEBUG_HTML_FILE = Path(__file__).parent / "debug_page.html"
+DASHBOARD_FILE = Path(__file__).parent / "sssb_kth_dashboard.html"
+STATIC_EXPORT_FILE = Path(__file__).parent / "dashboard_snapshot.html"
 
 PORT = int(os.environ.get("PORT", 5055))
 
@@ -1089,6 +1093,38 @@ def _run_scrape_impl(debug: bool = False, bf_only: bool = False, use_login: bool
     return result
 
 
+# ── Static export ────────────────────────────────────────────────────────
+
+def export_static_dashboard(result: dict, out_path: Path) -> Path:
+    """Write a single self-contained HTML file with this scrape's data inlined.
+
+    Opened straight from the filesystem — no Flask, no localhost. That matters
+    on a phone: iOS suspends a backgrounded process, so a server started in a
+    terminal app dies the moment you switch to the browser to look at it. A
+    plain file has no such problem. Leaflet and the fonts still come from their
+    CDNs, so viewing it needs a connection (but not a server).
+    """
+    html = DASHBOARD_FILE.read_text(encoding="utf-8")
+    # "</" is escaped so a stray closing tag inside the data can't terminate
+    # the <script> block early.
+    payload = json.dumps(result, ensure_ascii=False).replace("</", "<\\/")
+    inject = f"<script>window.__SSSB_DATA__ = {payload};</script>\n"
+
+    marker = '<script src="https://cdnjs'
+    if marker not in html:
+        raise SystemExit(
+            f"Couldn't find the Leaflet <script> tag in {DASHBOARD_FILE.name} to inject before — "
+            "the dashboard's markup must have changed; update export_static_dashboard()."
+        )
+    html = html.replace(marker, inject + marker, 1)
+
+    out_path.write_text(html, encoding="utf-8")
+    listings = result.get("listings", [])
+    print(f"\nWrote {out_path} ({out_path.stat().st_size:,} bytes, {len(listings)} listing(s))")
+    print("Open that file in a browser — it needs no server. Re-run this command to refresh it.")
+    return out_path
+
+
 # ── Local API + dashboard server ─────────────────────────────────────────
 
 def _background_poll_loop(interval_minutes: float, bf_only: bool = False, use_login: bool = False,
@@ -1153,6 +1189,10 @@ if __name__ == "__main__":
                         help="skip the SSSB browser scrape entirely (no Chrome/Selenium needed — e.g. on a "
                              "phone/tablet Python interpreter); refreshes Bostadsförmedlingen live and reuses "
                              "the last saved SSSB listings")
+    parser.add_argument("--export", nargs="?", const=str(STATIC_EXPORT_FILE), metavar="PATH",
+                        help="scrape once, then write a self-contained HTML snapshot (default: "
+                             "dashboard_snapshot.html) you can open straight from the filesystem with no "
+                             "server running. The recommended way to view this on a phone")
     parser.add_argument("--http-only", action="store_true",
                         help="never launch a browser: read SSSB over plain HTTP and fail loudly if that "
                              "isn't possible. This is the phone/tablet mode — combined with the fact that "
@@ -1171,6 +1211,10 @@ if __name__ == "__main__":
     elif args.login:
         _prompt_and_store()
         print("Done — future runs will use this automatically.")
+    elif args.export:
+        result = run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
+                            http_only=args.http_only)
+        export_static_dashboard(result, Path(args.export))
     elif args.once:
         run_scrape(debug=args.debug, bf_only=args.bf_only, use_login=args.with_login,
                    http_only=args.http_only)
