@@ -511,7 +511,7 @@ def _parse_listing_from_link(link, url: str) -> dict:
     if area is None:
         area = "Unknown"
 
-    housing_type, queue_days, rent_sek, size_sqm = _parse_card_fields(card_text)
+    housing_type, queue_days, rent_sek, size_sqm, floor = _parse_card_fields(card_text)
 
     return {
         "id": url,
@@ -521,6 +521,7 @@ def _parse_listing_from_link(link, url: str) -> dict:
         "queue_days": queue_days,
         "rent_sek": rent_sek,
         "size_sqm": size_sqm,
+        "floor": floor,
         "url": url,
     }
 
@@ -543,6 +544,26 @@ _CARD_VALUES_RE = re.compile(
     r"\d{4}-\d{2}-\d{2}\s*"  # move-in date — not currently surfaced
     r"(?P<queue>[\d\s]{1,6}?)\s*\(\d+\s*st\)"
 )
+
+# "Våning" (floor) is the last value in that same run, right after the queue
+# figure's "(Nst)" token — either a number or "Bottenvåning" (ground floor).
+# Confirmed against all 76 listings in a real scrape: values 1–11 plus
+# "Bottenvåning". Anything else (e.g. the card's trailing "Previous") parses
+# to None rather than a wrong number.
+_CARD_FLOOR_RE = re.compile(r"\(\d+\s*st\)\s*(\S+)")
+
+
+def _parse_floor(card_text: str) -> int | None:
+    """Floor as an int, with ground floor = 0. None if it isn't stated."""
+    m = _CARD_FLOOR_RE.search(card_text)
+    if not m:
+        return None
+    raw = m.group(1).strip()
+    if raw.isdigit():
+        return int(raw)
+    if raw.lower().startswith("botten"):  # "Bottenvåning" = ground floor
+        return 0
+    return None
 
 # The housing type ("Rum i korridor" = corridor/dorm room, "2 rum och kök" =
 # 2-room + kitchen, etc.) is whatever text sits between "Previous Next" and
@@ -569,8 +590,8 @@ def _translate_housing_type(raw: str) -> str:
 
 
 def _parse_card_fields(card_text: str):
-    """Returns (housing_type, queue_days, rent_sek, size_sqm), any of which
-    may be None if the card text doesn't match the expected shape (falls
+    """Returns (housing_type, queue_days, rent_sek, size_sqm, floor), any of
+    which may be None if the card text doesn't match the expected shape (falls
     back to the older, looser regexes so a format change degrades rather
     than silently returning nothing).
     """
@@ -579,12 +600,14 @@ def _parse_card_fields(card_text: str):
     if type_match and type_match.group(1).strip():
         housing_type = _translate_housing_type(type_match.group(1))
 
+    floor = _parse_floor(card_text)
+
     values_match = _CARD_VALUES_RE.search(card_text)
     if values_match:
         size_sqm = int(values_match.group("size"))
         rent_sek = int(re.sub(r"\s", "", values_match.group("rent")))
         queue_days = int(re.sub(r"\s", "", values_match.group("queue")))
-        return housing_type, queue_days, rent_sek, size_sqm
+        return housing_type, queue_days, rent_sek, size_sqm, floor
 
     # Fallback: older free-text heuristics, in case SSSB's card layout has
     # drifted from the labeled-table format confirmed above.
@@ -597,7 +620,7 @@ def _parse_card_fields(card_text: str):
     size_match = re.search(r"(\d{1,3})\s*m²", card_text)
     size_sqm = int(size_match.group(1)) if size_match else None
 
-    return housing_type, queue_days, rent_sek, size_sqm
+    return housing_type, queue_days, rent_sek, size_sqm, floor
 
 
 def scrape_listings(driver, debug: bool = False) -> list[dict]:
@@ -683,7 +706,7 @@ def scrape_listings(driver, debug: bool = False) -> list[dict]:
     print(f"  parsed {len(listings)} listing(s):")
     for l in listings:
         print(f"    [{l['area']}] queue_days={l['queue_days']} rent={l['rent_sek']} "
-              f"size={l['size_sqm']} :: {l['raw_text'][:90]}")
+              f"size={l['size_sqm']} floor={l['floor']} :: {l['raw_text'][:90]}")
 
     if len(listing_links) == 0:
         print("  ! No 'refid=' links found at all — either 0 listings are published right "
@@ -802,6 +825,10 @@ def fetch_bostadsformedlingen() -> list[dict]:
             "rent_sek": _bf_field(ad, "Hyra", "Manadshyra"),
             "size_sqm": _bf_field(ad, "Yta", "Kvm"),
             "rooms": _bf_field(ad, "AntalRum", "Rum"),
+            # Not known to be in the feed — tried tolerantly so the dashboard's
+            # floor filter can use it if it is. None just means "not stated",
+            # which never hides a listing.
+            "floor": _bf_field(ad, "Vaning", "Våning", "Floor", "Etage"),
             "deadline": _bf_field(ad, "AnnonseradTill", "SistaAnsokan", "AnmalanSenast"),
             "coords": coords,
             "url": f"https://bostad.stockholm.se/bostad/{ad_id}/" if ad_id else None,

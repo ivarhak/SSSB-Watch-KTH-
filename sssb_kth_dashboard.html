@@ -95,6 +95,61 @@
   .slider-row span.any{color:var(--paper-dim);}
   input[type=range]{width:122px;accent-color:var(--line-north);}
 
+  /* Cog: reveals the finer-grained filters (size, floor) that don't earn
+     permanent top-bar space. Carries a count badge while any of them is
+     engaged, so a hidden filter can never silently narrow the map. */
+  #advToggle{
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    width:32px;height:32px;
+    color:var(--paper);
+    background:var(--navy-800);
+    border:1px solid var(--navy-600);
+    border-radius:8px;
+    cursor:pointer;
+    align-self:flex-end;
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  #advToggle:hover{border-color:var(--line-north);}
+  #advToggle.open{background:var(--line-north);border-color:var(--line-north);color:var(--navy-950);}
+  #advToggle svg{transition:transform .25s ease;}
+  #advToggle.open svg{transform:rotate(60deg);}
+  #advToggle:focus-visible{outline:2px solid var(--line-north);outline-offset:2px;}
+  .adv-count{
+    position:absolute;top:-5px;right:-5px;
+    min-width:15px;height:15px;
+    font-family:var(--mono);font-size:9px;font-weight:600;line-height:15px;
+    background:var(--amber);color:var(--navy-950);
+    border-radius:999px;
+    text-align:center;
+  }
+
+  #advFilters{
+    display:none;
+    align-items:flex-end;
+    gap:22px;
+    flex-wrap:wrap;
+    padding:12px 22px 14px;
+    background:var(--navy-900);
+    border-bottom:1px solid var(--navy-700);
+    z-index:9;
+  }
+  #advFilters.open{display:flex;}
+  #advFilters .adv-hint{
+    font-family:var(--mono);font-size:10px;color:var(--paper-dim);
+    max-width:280px;line-height:1.5;
+  }
+  #advReset{
+    font-family:var(--mono);font-size:11px;
+    color:var(--line-north);
+    background:none;border:none;padding:0;cursor:pointer;
+    align-self:flex-end;
+  }
+  #advReset:focus-visible{outline:2px solid var(--line-north);outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){
+    #advToggle svg{transition:none;}
+  }
+
   .legend{display:flex;gap:10px;flex-wrap:wrap;}
   .legend button{
     font-family:var(--mono);
@@ -401,6 +456,14 @@
     </div>
   </div>
 
+  <button id="advToggle" aria-expanded="false" aria-controls="advFilters" title="More filters">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 2.6v3.1M12 18.3v3.1M4.3 7.1l2.7 1.55M17 15.35l2.7 1.55M4.3 16.9l2.7-1.55M17 8.65l2.7-1.55" stroke-linecap="round"/>
+    </svg>
+    <span class="adv-count" id="advCount" hidden></span>
+  </button>
+
   <div class="control">
     <label>Provider</label>
     <div class="legend" id="providerChips">
@@ -440,6 +503,37 @@
     <div id="autoStatus" style="color:var(--line-city);"></div>
   </div>
 </header>
+
+<div id="advFilters">
+  <div class="control">
+    <label>Min size</label>
+    <div class="slider-row">
+      <input type="range" id="minSize" min="0" max="80" value="0" step="2">
+      <span id="minSizeLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <div class="control">
+    <label>Lowest floor</label>
+    <div class="slider-row">
+      <input type="range" id="minFloor" min="0" max="11" value="0" step="1">
+      <span id="minFloorLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <div class="control">
+    <label>Highest floor</label>
+    <div class="slider-row">
+      <input type="range" id="maxFloor" min="0" max="11" value="11" step="1">
+      <span id="maxFloorLabel" class="any">Any</span>
+    </div>
+  </div>
+
+  <button id="advReset">Reset these</button>
+
+  <div class="adv-hint">Floor 0 is <em>bottenvåning</em>. Bostadsförmedlingen ads publish
+    neither floor nor queue days, so those sliders never hide them.</div>
+</div>
 
 <main>
   <div id="map"></div>
@@ -538,9 +632,13 @@ const METRO_LINES = [
 const activeGroups = new Set(['North','South','City']);
 const activeProviders = new Set(['SSSB','Bostadsförmedlingen']);
 let maxCommuteMin = 45;
-// null = slider parked at its max, i.e. no limit ("Any").
+// null = slider parked at its "no limit" end ("Any").
 let maxQueueDays = null;
 let maxRentSek = null;
+// Behind the cog — same null-means-no-limit convention.
+let minSizeSqm = null;
+let minFloor = null;
+let maxFloor = null;
 let currentData = null;
 let selectedArea = null;   // SSSB area name, or null
 let markers = [];
@@ -617,11 +715,27 @@ function listingCommute(l){
 function passesFilters(l){
   if (maxQueueDays !== null && l.queue_days != null && l.queue_days > maxQueueDays) return false;
   if (maxRentSek !== null && l.rent_sek != null && Number(l.rent_sek) > maxRentSek) return false;
+  if (minSizeSqm !== null && l.size_sqm != null && Number(l.size_sqm) < minSizeSqm) return false;
+  const floor = l.floor == null ? null : Number(l.floor);
+  if (floor != null && !Number.isNaN(floor)) {
+    if (minFloor !== null && floor < minFloor) return false;
+    if (maxFloor !== null && floor > maxFloor) return false;
+  }
   return true;
 }
 
+// Which of the cog's filters are engaged — drives the badge on the cog so
+// collapsing the panel can't hide the fact that it's still narrowing things.
+function advancedActiveCount(){
+  return [minSizeSqm, minFloor, maxFloor].filter(v => v !== null).length;
+}
+
 function filtersActive(){
-  return maxQueueDays !== null || maxRentSek !== null;
+  return maxQueueDays !== null || maxRentSek !== null || advancedActiveCount() > 0;
+}
+
+function floorLabel(n){
+  return n === 0 ? 'Ground' : String(n);
 }
 
 function render(){
@@ -903,6 +1017,10 @@ function renderSidebar(){
     const bits = [`within ${maxCommuteMin} min`];
     if (maxQueueDays !== null) bits.push(`≤${maxQueueDays.toLocaleString()} queue days`);
     if (maxRentSek !== null) bits.push(`≤${maxRentSek.toLocaleString()} kr`);
+    if (minSizeSqm !== null) bits.push(`≥${minSizeSqm} m²`);
+    if (minFloor !== null && maxFloor !== null) bits.push(`floor ${floorLabel(minFloor)}–${floorLabel(maxFloor)}`);
+    else if (minFloor !== null) bits.push(`floor ${floorLabel(minFloor)}+`);
+    else if (maxFloor !== null) bits.push(`floor ≤${floorLabel(maxFloor)}`);
     bits.push('SSSB sorted by queue days, BF by deadline');
     header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">${bits.join(' · ')}</div>`;
   }
@@ -933,24 +1051,64 @@ document.getElementById('maxCommute').addEventListener('input', (e) => {
   render();
 });
 
-// Both of these treat the slider's top end as "no limit" rather than a
-// literal ceiling, so nothing is hidden until you actually pull one down.
-function bindLimitSlider(inputId, labelId, format, setValue){
+// All of these treat one end of the slider as "no limit" rather than a
+// literal bound, so nothing is hidden until you actually pull one in: for a
+// max filter that's the top end, for a min filter the bottom.
+function bindLimitSlider(inputId, labelId, opts){
+  const { kind, format, set } = opts;
   const input = document.getElementById(inputId);
   const label = document.getElementById(labelId);
-  input.addEventListener('input', (e) => {
-    const raw = Number(e.target.value);
-    const atMax = raw >= Number(input.max);
-    setValue(atMax ? null : raw);
-    label.textContent = atMax ? 'Any' : format(raw);
-    label.classList.toggle('any', atMax);
-    render();
-  });
+  const openEnd = () => Number(kind === 'max' ? input.max : input.min);
+  const apply = () => {
+    const raw = Number(input.value);
+    const unlimited = raw === openEnd();
+    set(unlimited ? null : raw);
+    label.textContent = unlimited ? 'Any' : format(raw);
+    label.classList.toggle('any', unlimited);
+  };
+  input.addEventListener('input', () => { apply(); refreshAdvBadge(); render(); });
+  return { input, apply };
 }
-bindLimitSlider('maxQueue', 'maxQueueLabel',
-  v => v.toLocaleString() + ' d', v => { maxQueueDays = v; });
-bindLimitSlider('maxRent', 'maxRentLabel',
-  v => v.toLocaleString() + ' kr', v => { maxRentSek = v; });
+
+const maxQueueSlider = bindLimitSlider('maxQueue', 'maxQueueLabel',
+  { kind:'max', format: v => v.toLocaleString() + ' d', set: v => { maxQueueDays = v; } });
+const maxRentSlider = bindLimitSlider('maxRent', 'maxRentLabel',
+  { kind:'max', format: v => v.toLocaleString() + ' kr', set: v => { maxRentSek = v; } });
+
+const advSliders = [
+  bindLimitSlider('minSize', 'minSizeLabel',
+    { kind:'min', format: v => v + ' m²', set: v => { minSizeSqm = v; } }),
+  bindLimitSlider('minFloor', 'minFloorLabel',
+    { kind:'min', format: v => floorLabel(v) + '+', set: v => { minFloor = v; } }),
+  bindLimitSlider('maxFloor', 'maxFloorLabel',
+    { kind:'max', format: v => '≤' + floorLabel(v), set: v => { maxFloor = v; } }),
+];
+
+function refreshAdvBadge(){
+  const n = advancedActiveCount();
+  const badge = document.getElementById('advCount');
+  badge.textContent = n;
+  badge.hidden = n === 0;
+}
+
+document.getElementById('advToggle').addEventListener('click', (e) => {
+  const btn = e.currentTarget;
+  const open = !btn.classList.contains('open');
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', String(open));
+  document.getElementById('advFilters').classList.toggle('open', open);
+  // The map has a fixed-height flex parent, so opening the panel resizes it.
+  if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 0);
+});
+
+document.getElementById('advReset').addEventListener('click', () => {
+  advSliders.forEach(s => {
+    s.input.value = s.input.getAttribute('value');
+    s.apply();
+  });
+  refreshAdvBadge();
+  render();
+});
 
 document.getElementById('legend').addEventListener('click', (e) => {
   const btn = e.target.closest('button');

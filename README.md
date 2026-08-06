@@ -186,8 +186,20 @@ with "Start in" set to this folder.
   area shows the gray × once nothing in it still qualifies. Bostadsförmedlingen
   ads are never hidden by the queue-days slider — they publish an application
   deadline instead of a queue-days figure, so there's nothing to compare
-  against. The "All listings" search tab ignores all three sliders, so it's
+  against. The "All listings" search tab ignores every slider, so it's
   the way to look at everything regardless of what's filtered.
+- **The cog** (next to those sliders) opens a second row with the
+  finer-grained filters: minimum size, and a lowest/highest floor range
+  (floor 0 = *bottenvåning*). They behave the same way — "Any" until you pull
+  one in — and while any of them is engaged the cog shows an amber count, so
+  you can collapse the panel without forgetting the map is still narrowed.
+  "Reset these" clears just that row.
+- **No elevator filter**: SSSB's vacancy list doesn't publish whether a
+  building has a lift — the card only carries type, address, area, size,
+  rent, move-in date, queue days and floor. Adding one would mean opening
+  each listing's own page during every scrape (76 extra page loads), and
+  it's not confirmed that page states it either. The floor sliders are the
+  practical stand-in for "no walk-up".
 - **If SSSB changes their site**, the selectors in step 3 are the only
   place you should need to touch.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
