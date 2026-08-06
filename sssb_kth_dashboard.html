@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SSSB → KTH Commute Board</title>
+<title>SSSB → KTH housing finder</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -19,6 +19,7 @@
     --line-north:#4C9FE8;
     --line-south:#E0596B;
     --line-city:#3FBF8F;
+    --bf-purple:#9B7EDE;
     --amber:#E8A33D;
     --red-flag:#E0596B;
     --empty-gray:#64748B;
@@ -88,7 +89,7 @@
   .slider-row span{font-family:var(--mono);font-size:12px;min-width:52px;}
   input[type=range]{width:140px;accent-color:var(--line-north);}
 
-  .legend{display:flex;gap:10px;}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;}
   .legend button{
     font-family:var(--mono);
     font-size:11px;
@@ -109,6 +110,8 @@
   .legend button[data-g="North"] .sw{background:var(--line-north);}
   .legend button[data-g="South"] .sw{background:var(--line-south);}
   .legend button[data-g="City"] .sw{background:var(--line-city);}
+  .legend button[data-p="SSSB"] .sw{background:var(--line-city);}
+  .legend button[data-p="Bostadsförmedlingen"] .sw{background:var(--bf-purple);}
 
   #browseAllBtn{
     font-family:var(--mono);
@@ -185,8 +188,29 @@
   #sidebar::-webkit-scrollbar{width:6px;}
   #sidebar::-webkit-scrollbar-thumb{background:var(--navy-600);border-radius:3px;}
 
+  .tabs{
+    position:sticky;top:0;z-index:6;
+    display:flex;
+    background:var(--navy-900);
+    border-bottom:1px solid var(--navy-700);
+  }
+  .tabs button{
+    flex:1;
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.05em;
+    color:var(--paper-dim);
+    background:none;
+    border:none;
+    padding:13px 0 11px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  .tabs button.active{color:var(--paper);border-bottom-color:var(--line-north);}
+
   .panel-header{
-    position:sticky;top:0;
+    position:sticky;top:var(--tabs-h, 40px);
     background:var(--navy-900);
     padding:16px 18px 10px;
     border-bottom:1px solid var(--navy-700);
@@ -235,10 +259,19 @@
     font-size:12px;font-weight:600;
     padding:3px 8px;border-radius:6px;
     background:var(--navy-700);
+    white-space:nowrap;
   }
   .listing-row .details{
     font-family:var(--mono);font-size:11px;color:var(--paper-dim);margin-top:5px;
   }
+  .provider-tag{
+    display:inline-block;
+    font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.05em;
+    padding:2px 7px;border-radius:5px;
+    margin-top:7px;
+  }
+  .provider-tag.sssb{background:rgba(63,191,143,0.16);color:var(--line-city);border:1px solid rgba(63,191,143,0.4);}
+  .provider-tag.bf{background:rgba(155,126,222,0.16);color:var(--bf-purple);border:1px solid rgba(155,126,222,0.4);}
   .new-tag{
     position:absolute;top:-7px;right:10px;
     font-family:var(--mono);font-size:9px;font-weight:600;
@@ -264,6 +297,20 @@
     padding:30px 20px;text-align:center;color:var(--paper-dim);
     font-family:var(--mono);font-size:12px;line-height:1.6;
   }
+
+  /* ── Queues tab ──────────────────────────────────────── */
+  #queues{padding:14px 18px;display:none;}
+  .queue-card{
+    background:var(--navy-800);border:1px solid var(--navy-700);
+    border-radius:12px;padding:15px 16px;margin-bottom:12px;
+  }
+  .queue-card h3{margin:0 0 4px;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .queue-card .covers{font-family:var(--mono);font-size:10px;color:var(--paper-dim);margin-bottom:10px;}
+  .queue-card p{font-size:12.5px;line-height:1.55;color:var(--paper);margin:0 0 8px;}
+  .queue-card p:last-child{margin-bottom:0;}
+  .queue-card a{color:var(--line-north);}
+  .queue-card .kv{font-family:var(--mono);font-size:11px;color:var(--paper-dim);}
+  .queue-card .kv b{color:var(--paper);font-weight:600;}
 
   #banner{
     display:none;
@@ -300,6 +347,12 @@
     display:flex;align-items:center;justify-content:center;
     font-family:var(--mono);
   }
+  .bf-pin{
+    width:13px;height:13px;border-radius:50%;
+    background:var(--bf-purple);
+    border:2px solid #fff;
+    box-shadow:0 1px 4px rgba(10,23,38,0.45);
+  }
 </style>
 </head>
 <body>
@@ -310,8 +363,8 @@
   <div class="brand">
     <span class="dot"></span>
     <div>
-      <h1>SSSB → KTH Commute Board</h1>
-      <div class="sub">student housing, sorted by queue days</div>
+      <h1>SSSB → KTH housing finder</h1>
+      <div class="sub">SSSB + Bostadsförmedlingen, sorted for you</div>
     </div>
   </div>
 
@@ -324,7 +377,15 @@
   </div>
 
   <div class="control">
-    <label>Lines</label>
+    <label>Provider</label>
+    <div class="legend" id="providerChips">
+      <button data-p="SSSB"><span class="sw"></span>SSSB</button>
+      <button data-p="Bostadsförmedlingen"><span class="sw"></span>Bostadsförm.</button>
+    </div>
+  </div>
+
+  <div class="control">
+    <label>SSSB lines</label>
     <div class="legend" id="legend">
       <button data-g="North"><span class="sw"></span>North</button>
       <button data-g="South"><span class="sw"></span>South</button>
@@ -358,10 +419,36 @@
 <main>
   <div id="map"></div>
   <div id="sidebar">
-    <div class="panel-header" id="panelHeader">
-      <h2 id="panelTitle">All available listings</h2>
+    <div class="tabs">
+      <button id="tabListings" class="active" onclick="switchTab('listings')">LISTINGS</button>
+      <button id="tabQueues" onclick="switchTab('queues')">QUEUES TO JOIN</button>
     </div>
-    <div id="listings"></div>
+    <div id="listingsView">
+      <div class="panel-header" id="panelHeader">
+        <h2 id="panelTitle">All available listings</h2>
+      </div>
+      <div id="listings"></div>
+    </div>
+    <div id="queues">
+      <div class="queue-card">
+        <h3><span class="provider-tag sssb" style="margin:0;">SSSB</span> SSSB queue</h3>
+        <div class="covers">Covers: all SSSB areas (Lappkärrsberget, Jerum, Kungshamra, …)</div>
+        <p>Register at <a href="https://sssb.se" target="_blank">sssb.se</a>. You collect one queue day per day, and listings go to whoever applies with the most queue days — that's the number this dashboard sorts by.</p>
+        <p>To actually sign a contract you need to be a member of an SSCO-affiliated student union (as a KTH student, THS membership covers this) and meet their study-pace requirements — check their current rules on the site.</p>
+        <p class="kv"><b>Do this first:</b> registering is quick and days only start counting from when you register, so every week earlier is a week higher in every future queue.</p>
+      </div>
+      <div class="queue-card">
+        <h3><span class="provider-tag bf" style="margin:0;">BOSTADSFÖRM.</span> Bostadsförmedlingen (bostad.stockholm.se)</h3>
+        <div class="covers">Covers: Svenska Bostäder student apartments + other landlords' student housing across Stockholm</div>
+        <p>This is Stockholm's city housing agency — Svenska Bostäder doesn't run its own student queue, their listings are advertised here. Register at <a href="https://bostad.stockholm.se" target="_blank">bostad.stockholm.se</a>; there's a yearly queue fee, and offers go by queue time.</p>
+        <p>Student listings here often have much shorter effective queues than regular apartments — and unlike SSSB there's no student-union requirement to register, though student listings require you to be studying when you sign.</p>
+        <p class="kv"><b>Note:</b> ads here show an application deadline ("sista ansökningsdag") rather than a required queue-days figure — you apply and the longest-queued applicant wins, so it costs nothing to try even with few days.</p>
+      </div>
+      <div class="queue-card">
+        <h3>Strategy</h3>
+        <p>Join both queues now, even before moving — they're independent and both reward early registration. Use SSSB queue days for the areas closest to KTH (Lappkärrsberget, Jerum, Kungshamra are the classic first-year picks), and treat Bostadsförmedlingen student ads as your parallel shot — especially Norra Djurgården/Albano listings, which are effectively on KTH's doorstep.</p>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -380,13 +467,15 @@ const OTHER_SCHOOLS = [
 ];
 const LINE_COLORS = { North: '#4C9FE8', South: '#E0596B', City: '#3FBF8F' };
 const activeGroups = new Set(['North','South','City']);
+const activeProviders = new Set(['SSSB','Bostadsförmedlingen']);
 let maxCommuteMin = 45;
 let currentData = null;
-let selectedArea = null;
-let markers = {};
+let selectedArea = null;   // SSSB area name, or null
+let markers = [];
 let routeLine = null;
 let browseAll = false;
 let searchQuery = '';
+let currentTab = 'listings';
 
 // ---- demo data, shown only if the local server (sssb_kth_monitor.py --serve) isn't running ----
 const DEMO_DATA = {
@@ -402,13 +491,16 @@ const DEMO_DATA = {
     "Flemingsberg": { group:"South", coords:[59.2167,17.9500], straight_line:{distance_km:15.1,bike_min:64,walk_min:181}, transit_min:47 },
   },
   listings: [
-    { id:"d1", area:"Jerum", queue_days:410, rent_sek:5200, size_sqm:19, url:null },
-    { id:"d2", area:"Roslagstull", queue_days:875, rent_sek:6100, size_sqm:24, url:null },
-    { id:"d3", area:"Lappkärrsberget", queue_days:1230, rent_sek:5600, size_sqm:20, url:null },
-    { id:"d4", area:"Tanto", queue_days:1990, rent_sek:7400, size_sqm:32, url:null },
-    { id:"d5", area:"Kungshamra", queue_days:640, rent_sek:5900, size_sqm:22, url:null },
+    { id:"d1", provider:"SSSB", landlord:"SSSB", area:"Jerum", queue_days:410, rent_sek:5200, size_sqm:19, url:null },
+    { id:"d2", provider:"SSSB", landlord:"SSSB", area:"Roslagstull", queue_days:875, rent_sek:6100, size_sqm:24, url:null },
+    { id:"d3", provider:"SSSB", landlord:"SSSB", area:"Lappkärrsberget", queue_days:1230, rent_sek:5600, size_sqm:20, url:null },
+    { id:"d4", provider:"SSSB", landlord:"SSSB", area:"Tanto", queue_days:1990, rent_sek:7400, size_sqm:32, url:null },
+    { id:"d5", provider:"SSSB", landlord:"SSSB", area:"Kungshamra", queue_days:640, rent_sek:5900, size_sqm:22, url:null },
+    { id:"bf-1", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Albanovägen 4", rent_sek:8340, size_sqm:25, rooms:1, deadline:"2026-08-12", coords:[59.3527,18.0553], transit_min:6, straight_line:{distance_km:0.6,bike_min:5,walk_min:8}, url:null },
+    { id:"bf-2", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Ruddammsvägen 65", rent_sek:6213, size_sqm:14, rooms:1, deadline:"2026-08-12", coords:[59.3536,18.0596], transit_min:5, straight_line:{distance_km:0.5,bike_min:5,walk_min:7}, url:null },
+    { id:"bf-3", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Kungsholmen", address:"Sankt Göransgatan 95", rent_sek:6632, size_sqm:20, rooms:1, deadline:"2026-08-12", coords:[59.3355,18.0203], transit_min:22, straight_line:{distance_km:3.2,bike_min:16,walk_min:38}, url:null },
   ],
-  new_listing_ids: ["d1"]
+  new_listing_ids: ["d1","bf-2"]
 };
 
 function showBanner(text){
@@ -433,11 +525,16 @@ async function loadData(triggerRefresh){
   render();
 }
 
-function commuteMinutes(area){
-  if (!area) return Infinity;
-  if (typeof area.transit_min === 'number') return area.transit_min;
-  if (area.straight_line) return area.straight_line.bike_min;
+function commuteMinutes(obj){
+  if (!obj) return Infinity;
+  if (typeof obj.transit_min === 'number') return obj.transit_min;
+  if (obj.straight_line) return obj.straight_line.bike_min;
   return Infinity;
+}
+
+function listingCommute(l){
+  if (l.provider === 'SSSB') return commuteMinutes(currentData.areas[l.area]);
+  return commuteMinutes(l);
 }
 
 function render(){
@@ -450,17 +547,26 @@ function renderMeta(){
   const d = currentData;
   document.getElementById('lastUpdated').textContent =
     'updated ' + new Date(d.generated_at).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'});
+  const bySrc = {};
+  d.listings.forEach(l => bySrc[l.provider] = (bySrc[l.provider]||0)+1);
   document.getElementById('listingCount').textContent =
-    d.listings.length + ' listings across ' + Object.keys(d.areas).length + ' areas';
+    Object.entries(bySrc).map(([p,n]) => `${n} ${p === 'Bostadsförmedlingen' ? 'BF' : p}`).join(' · ') || '0 listings';
   document.getElementById('autoStatus').textContent = d.demo
     ? ''
     : (d.poll_interval_min ? `● auto-checking every ${d.poll_interval_min}min` : '');
 }
 
-function visibleAreaNames(){
+function visibleSssbAreaNames(){
+  if (!activeProviders.has('SSSB')) return [];
   return Object.entries(currentData.areas)
     .filter(([name, a]) => activeGroups.has(a.group) && commuteMinutes(a) <= maxCommuteMin)
     .map(([name]) => name);
+}
+
+function visibleBfListings(){
+  if (!activeProviders.has('Bostadsförmedlingen')) return [];
+  return currentData.listings.filter(l =>
+    l.provider === 'Bostadsförmedlingen' && listingCommute(l) <= maxCommuteMin);
 }
 
 let leafletMap;
@@ -478,39 +584,60 @@ function initMap(){
     L.marker(school.coords, { icon: schoolIcon }).addTo(leafletMap)
       .bindTooltip(school.name, { direction:'top', opacity:0.85 });
   });
+
+  // .panel-header sticks just below .tabs — measure the real rendered
+  // height rather than hardcoding it, so a font/zoom change can't leave a
+  // gap or overlap between the two sticky bars.
+  const tabsEl = document.querySelector('.tabs');
+  if (tabsEl) document.documentElement.style.setProperty('--tabs-h', tabsEl.offsetHeight + 'px');
 }
 
 function renderMap(){
-  Object.values(markers).forEach(m => leafletMap.removeLayer(m));
-  markers = {};
-  const visible = new Set(visibleAreaNames());
+  markers.forEach(m => leafletMap.removeLayer(m));
+  markers = [];
 
-  Object.entries(currentData.areas).forEach(([name, area]) => {
-    if (!area.coords) return;
-    const isVisible = visible.has(name);
-    const count = currentData.listings.filter(l => l.area === name).length;
-    const isEmpty = count === 0;
-    const color = isEmpty ? 'var(--empty-gray)' : (LINE_COLORS[area.group] || '#888');
-    const size = isEmpty ? 16 : 14 + Math.min(count, 6) * 3;
+  if (activeProviders.has('SSSB')) {
+    const visible = new Set(visibleSssbAreaNames());
+    Object.entries(currentData.areas).forEach(([name, area]) => {
+      if (!area.coords) return;
+      const isVisible = visible.has(name);
+      const count = currentData.listings.filter(l => l.provider === 'SSSB' && l.area === name).length;
+      const isEmpty = count === 0;
+      const color = isEmpty ? 'var(--empty-gray)' : (LINE_COLORS[area.group] || '#888');
+      const size = isEmpty ? 16 : 14 + Math.min(count, 6) * 3;
 
-    const icon = L.divIcon({
-      className:'',
-      html:`<div class="area-roundel" style="width:${size}px;height:${size}px;background:${isVisible?color:'#334'};color:${isEmpty?'#fff':'#0a1726'};font-size:${isEmpty?11:10}px;font-weight:700;opacity:${isVisible?1:0.35}">${isEmpty ? '×' : count}</div>`,
-      iconSize:[size,size],
+      const icon = L.divIcon({
+        className:'',
+        html:`<div class="area-roundel" style="width:${size}px;height:${size}px;background:${isVisible?color:'#334'};color:${isEmpty?'#fff':'#0a1726'};font-size:${isEmpty?11:10}px;font-weight:700;opacity:${isVisible?1:0.35}">${isEmpty ? '×' : count}</div>`,
+        iconSize:[size,size],
+      });
+      const marker = L.marker(area.coords, { icon }).addTo(leafletMap);
+      marker.on('click', () => selectArea(name));
+      if (count > 0) {
+        marker.bindTooltip(`${name} · ${count} available`, { direction:'top' });
+      } else {
+        marker.bindTooltip(`${name} · none available`, { direction:'top', opacity:0.7 });
+      }
+      markers.push(marker);
     });
-    const marker = L.marker(area.coords, { icon }).addTo(leafletMap);
-    marker.on('click', () => selectArea(name));
-    if (count > 0) {
-      marker.bindTooltip(`${name} · ${count} available`, { direction:'top' });
-    } else {
-      marker.bindTooltip(`${name} · none available`, { direction:'top', opacity:0.7 });
-    }
-    markers[name] = marker;
+  }
+
+  // Bostadsförmedlingen: precise per-listing pins (each ad has its own coords).
+  visibleBfListings().forEach(l => {
+    if (!l.coords) return;
+    const icon = L.divIcon({ className:'', html:'<div class="bf-pin"></div>', iconSize:[13,13] });
+    const marker = L.marker(l.coords, { icon }).addTo(leafletMap);
+    marker.bindTooltip(`${l.address || l.area} · ${l.rent_sek ? l.rent_sek + ' kr' : ''} (${l.landlord || 'BF'})`, { direction:'top' });
+    if (l.url) marker.on('click', () => window.open(l.url, '_blank'));
+    markers.push(marker);
   });
 }
 
 function selectArea(name){
   selectedArea = name;
+  browseAll = false;
+  document.getElementById('browseAllBtn').classList.remove('active');
+  switchTab('listings');
   const area = currentData.areas[name];
   if (routeLine) leafletMap.removeLayer(routeLine);
   if (area && area.coords) {
@@ -528,27 +655,54 @@ function clearSelection(){
   renderSidebar();
 }
 
-function fmtCommute(area){
+function fmtCommute(obj){
   const parts = [];
-  if (area.straight_line) {
-    parts.push(`<div class="gauge"><div class="g-label">Straight-line</div><div class="g-value">${area.straight_line.distance_km}<small> km · ~${area.straight_line.bike_min}min bike</small></div></div>`);
+  if (obj.straight_line) {
+    parts.push(`<div class="gauge"><div class="g-label">Straight-line</div><div class="g-value">${obj.straight_line.distance_km}<small> km · ~${obj.straight_line.bike_min}min bike</small></div></div>`);
   }
-  parts.push(`<div class="gauge"><div class="g-label">Transit (real)</div><div class="g-value">${typeof area.transit_min === 'number' ? area.transit_min + '<small> min</small>' : '<small>no API key set</small>'}</div></div>`);
+  parts.push(`<div class="gauge"><div class="g-label">Transit (real)</div><div class="g-value">${typeof obj.transit_min === 'number' ? obj.transit_min + '<small> min</small>' : '<small>no API key set</small>'}</div></div>`);
   return parts.join('');
 }
 
+function providerTag(l){
+  if (l.provider === 'SSSB') return '<span class="provider-tag sssb">SSSB</span>';
+  const lbl = l.landlord && l.landlord !== 'Bostadsförmedlingen'
+    ? 'BF · ' + l.landlord.toUpperCase() : 'BOSTADSFÖRMEDLINGEN';
+  return `<span class="provider-tag bf">${lbl}</span>`;
+}
+
+function badgeFor(l){
+  if (l.provider === 'SSSB') {
+    return l.queue_days != null ? l.queue_days.toLocaleString() + ' days' : '— days';
+  }
+  return l.deadline ? 'apply by ' + String(l.deadline).slice(0,10) : 'open now';
+}
+
+function sortListings(rows){
+  return rows.slice().sort((a,b) => {
+    // SSSB first by ascending queue days, then BF by soonest deadline
+    if (a.provider !== b.provider) return a.provider === 'SSSB' ? -1 : 1;
+    if (a.provider === 'SSSB') return (a.queue_days ?? 1e9) - (b.queue_days ?? 1e9);
+    return String(a.deadline || '9999').localeCompare(String(b.deadline || '9999'));
+  });
+}
+
 function rowHtml(l, newIds){
-  const area = currentData.areas[l.area] || {};
-  const qd = l.queue_days != null ? l.queue_days.toLocaleString() + ' days' : '— days';
-  const commute = typeof area.transit_min === 'number' ? area.transit_min + ' min transit' : (area.straight_line ? '~' + area.straight_line.bike_min + ' min bike' : '');
+  const commuteRef = l.provider === 'SSSB' ? (currentData.areas[l.area] || {}) : l;
+  const commute = typeof commuteRef.transit_min === 'number'
+    ? commuteRef.transit_min + ' min transit'
+    : (commuteRef.straight_line ? '~' + commuteRef.straight_line.bike_min + ' min bike' : '');
+  const title = l.provider === 'SSSB' ? l.area : (l.address || l.area);
+  const sub = l.provider === 'SSSB' ? (l.type ? l.type + ' · ' : '') : (l.area + ' · ');
   return `
     <div class="listing-row" onclick="handleRowClick('${l.id.replace(/'/g,"\\'")}')">
       ${newIds.has(l.id) ? '<span class="new-tag">NEW</span>' : ''}
       <div class="row-top">
-        <span class="area-name">${l.area}</span>
-        <span class="queue-badge">${qd}</span>
+        <span class="area-name">${title}</span>
+        <span class="queue-badge">${badgeFor(l)}</span>
       </div>
-      <div class="details">${l.type ? l.type + ' · ' : ''}${l.size_sqm ? l.size_sqm + ' m² · ' : ''}${l.rent_sek ? l.rent_sek.toLocaleString() + ' kr/mo · ' : ''}${commute}</div>
+      <div class="details">${sub}${l.size_sqm ? l.size_sqm + ' m² · ' : ''}${l.rent_sek ? Number(l.rent_sek).toLocaleString() + ' kr/mo · ' : ''}${commute}</div>
+      ${providerTag(l)}
     </div>
   `;
 }
@@ -557,8 +711,8 @@ function handleRowClick(id){
   const l = currentData.listings.find(x => x.id === id);
   if (!l) return;
   if (l.url) { window.open(l.url, '_blank'); return; }
+  if (l.provider !== 'SSSB') return;
   if (selectedArea) return;
-  if (browseAll) { browseAll = false; document.getElementById('browseAllBtn').classList.remove('active'); }
   selectArea(l.area);
 }
 
@@ -568,6 +722,9 @@ function toggleBrowseAll(){
   if (browseAll) {
     selectedArea = null;
     if (routeLine) { leafletMap.removeLayer(routeLine); routeLine = null; }
+    currentTab = 'listings';
+    document.getElementById('tabListings').classList.add('active');
+    document.getElementById('tabQueues').classList.remove('active');
   }
   searchQuery = '';
   renderSidebar();
@@ -575,7 +732,7 @@ function toggleBrowseAll(){
 
 function matchesSearch(l, q){
   if (!q) return true;
-  const haystack = [l.area, l.type, l.rent_sek, l.size_sqm, l.queue_days, l.raw_text]
+  const haystack = [l.area, l.address, l.landlord, l.type, l.rent_sek, l.size_sqm, l.queue_days, l.deadline, l.raw_text]
     .filter(v => v != null)
     .join(' ')
     .toLowerCase();
@@ -587,7 +744,7 @@ function renderBrowseList(){
   const newIds = new Set(currentData.new_listing_ids || []);
   const q = searchQuery.trim().toLowerCase();
   let rows = currentData.listings.filter(l => matchesSearch(l, q));
-  rows = rows.slice().sort((a,b) => (a.queue_days ?? 1e9) - (b.queue_days ?? 1e9));
+  rows = sortListings(rows);
 
   if (rows.length === 0) {
     list.innerHTML = `<div class="empty-state">No listings match "${searchQuery}".</div>`;
@@ -597,6 +754,10 @@ function renderBrowseList(){
 }
 
 function renderSidebar(){
+  document.getElementById('listingsView').style.display = currentTab === 'listings' ? 'block' : 'none';
+  document.getElementById('queues').style.display = currentTab === 'queues' ? 'block' : 'none';
+  if (currentTab !== 'listings') return;
+
   const header = document.getElementById('panelHeader');
   const list = document.getElementById('listings');
   const newIds = new Set(currentData.new_listing_ids || []);
@@ -623,24 +784,35 @@ function renderSidebar(){
     const area = currentData.areas[selectedArea];
     header.innerHTML = `
       <button class="back" onclick="clearSelection()">← All listings</button>
-      <h2 id="panelTitle">${selectedArea} <span style="color:var(--paper-dim);font-weight:400;font-size:12px;">· ${area.group} line</span></h2>
+      <h2 id="panelTitle">${selectedArea} <span style="color:var(--paper-dim);font-weight:400;font-size:12px;">· ${area.group} line · SSSB</span></h2>
       <div class="stats-row">${fmtCommute(area)}</div>
     `;
-    rows = currentData.listings.filter(l => l.area === selectedArea);
+    rows = currentData.listings.filter(l => l.provider === 'SSSB' && l.area === selectedArea);
   } else {
-    header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">within ${maxCommuteMin} min · sorted by queue days</div>`;
-    const visible = new Set(visibleAreaNames());
-    rows = currentData.listings.filter(l => visible.has(l.area));
+    header.innerHTML = `<h2 id="panelTitle">All available listings</h2><div style="font-family:var(--mono);font-size:10.5px;color:var(--paper-dim);margin-top:4px;">within ${maxCommuteMin} min · SSSB sorted by queue days, BF by deadline</div>`;
+    const visibleAreas = new Set(visibleSssbAreaNames());
+    const bfVisible = new Set(visibleBfListings().map(l => l.id));
+    rows = currentData.listings.filter(l =>
+      (l.provider === 'SSSB' && activeProviders.has('SSSB') && visibleAreas.has(l.area)) ||
+      (l.provider === 'Bostadsförmedlingen' && bfVisible.has(l.id))
+    );
   }
 
-  rows = rows.slice().sort((a,b) => (a.queue_days ?? 1e9) - (b.queue_days ?? 1e9));
+  rows = sortListings(rows);
 
   if (rows.length === 0) {
-    list.innerHTML = `<div class="empty-state">No available listings here right now.<br>SSSB publishes new units a couple of times a week — leave the local script running and it'll notify you when one shows up.</div>`;
+    list.innerHTML = `<div class="empty-state">No available listings here right now.<br>Leave the local script running — you'll get a notification the moment something is published.</div>`;
     return;
   }
 
   list.innerHTML = rows.map(l => rowHtml(l, newIds)).join('');
+}
+
+function switchTab(tab){
+  currentTab = tab;
+  document.getElementById('tabListings').classList.toggle('active', tab === 'listings');
+  document.getElementById('tabQueues').classList.toggle('active', tab === 'queues');
+  renderSidebar();
 }
 
 // ---- controls ----
@@ -656,6 +828,16 @@ document.getElementById('legend').addEventListener('click', (e) => {
   const g = btn.dataset.g;
   if (activeGroups.has(g)) { activeGroups.delete(g); btn.classList.add('off'); }
   else { activeGroups.add(g); btn.classList.remove('off'); }
+  render();
+});
+
+document.getElementById('providerChips').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const p = btn.dataset.p;
+  if (activeProviders.has(p)) { activeProviders.delete(p); btn.classList.add('off'); }
+  else { activeProviders.add(p); btn.classList.remove('off'); }
+  if (p === 'SSSB' && !activeProviders.has('SSSB')) clearSelection();
   render();
 });
 

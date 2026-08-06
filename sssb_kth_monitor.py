@@ -68,6 +68,13 @@ LOGIN_URL = "https://minasidor.sssb.se/en/login/"
 # click through a numbered pager at all.
 LISTINGS_URL = "https://minasidor.sssb.se/lediga-bostader/?pagination=1&paginationantal=200"
 
+# Bostadsförmedlingen (Stockholm's city housing agency) exposes all current
+# ads as plain JSON here — no login, no browser needed. Svenska Bostäder's
+# student apartments are advertised THROUGH this same system (their own site
+# links every listing to bostad.stockholm.se/bostad/<id>), so this one feed
+# covers both of Ivar's requested extra sources.
+BF_ALL_ADS_URL = "https://bostad.stockholm.se/Lista/AllaAnnonser"
+
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 CURRENT_FILE = DATA_DIR / "current_listings.json"
@@ -724,6 +731,95 @@ def notify_new(new_listings: list[dict]):
 _scrape_lock = threading.Lock()
 
 
+def _bf_field(ad: dict, *names, default=None):
+    """Tolerant field getter — the AllaAnnonser JSON's exact key names have
+    shifted over the years (community scrapers show several variants), so try
+    each candidate name case-insensitively rather than hard-failing.
+    """
+    lower_map = {k.lower(): v for k, v in ad.items()}
+    for n in names:
+        if n.lower() in lower_map and lower_map[n.lower()] is not None:
+            return lower_map[n.lower()]
+    return default
+
+
+def fetch_bostadsformedlingen() -> list[dict]:
+    """Fetch current STUDENT ads from Bostadsförmedlingen's public JSON feed.
+
+    Every ad carries its own coordinates and landlord (hyresvärd) — e.g.
+    Svenska Bostäder — so these get precise per-listing pins on the map
+    rather than SSSB-style area dots, plus a provider tag.
+
+    No credentials involved; plain GET. If the feed's shape changes, this
+    prints the first ad's keys so the field mapping is fixable from terminal
+    output alone.
+    """
+    print("fetching Bostadsförmedlingen ads (bostad.stockholm.se)...")
+    try:
+        resp = requests.get(
+            BF_ALL_ADS_URL,
+            headers={"User-Agent": "Mozilla/5.0 (personal student-housing monitor)"},
+            timeout=25,
+        )
+        resp.raise_for_status()
+        ads = resp.json()
+    except (requests.RequestException, ValueError) as e:
+        print(f"  ! Bostadsförmedlingen fetch failed ({e}) — continuing with SSSB only")
+        return []
+
+    if not isinstance(ads, list):
+        print(f"  ! unexpected response shape ({type(ads).__name__}) — continuing with SSSB only")
+        return []
+    print(f"  feed contains {len(ads)} total ads")
+    if ads:
+        print(f"  (first ad's fields: {sorted(ads[0].keys())[:20]}...)")
+
+    listings = []
+    for ad in ads:
+        if not _bf_field(ad, "Student", "student"):
+            continue  # only student housing
+
+        ad_id = _bf_field(ad, "AnnonsId", "annonsid", "Id")
+        lat = _bf_field(ad, "KoordinatLatitud", "Latitud", "lat")
+        lon = _bf_field(ad, "KoordinatLongitud", "Longitud", "lng", "lon")
+        landlord = _bf_field(ad, "Hyresvard", "Hyresvärd", "Uthyrare", default="")
+        district = _bf_field(ad, "Stadsdel", "Omrade", "Område", default="") or ""
+        kommun = _bf_field(ad, "Kommun", default="") or ""
+
+        try:
+            coords = [float(lat), float(lon)] if lat and lon else None
+        except (TypeError, ValueError):
+            coords = None
+
+        listings.append({
+            "id": f"bf-{ad_id}",
+            "provider": "Bostadsförmedlingen",
+            "landlord": landlord or None,
+            "area": district or kommun or "Stockholm",
+            "address": _bf_field(ad, "Gatuadress", "Adress", default=""),
+            "raw_text": "",
+            "queue_days": None,  # BF doesn't publish required queue time up front
+            "rent_sek": _bf_field(ad, "Hyra", "Manadshyra"),
+            "size_sqm": _bf_field(ad, "Yta", "Kvm"),
+            "rooms": _bf_field(ad, "AntalRum", "Rum"),
+            "deadline": _bf_field(ad, "AnnonseradTill", "SistaAnsokan", "AnmalanSenast"),
+            "coords": coords,
+            "url": f"https://bostad.stockholm.se/bostad/{ad_id}/" if ad_id else None,
+        })
+
+    with_coords = sum(1 for l in listings if l["coords"])
+    print(f"  kept {len(listings)} student ad(s) ({with_coords} with coordinates)")
+    if listings and with_coords == 0:
+        print("  ! none had parseable coordinates — the lat/lon field names likely "
+              "changed; check the printed field list above and update _bf_field calls.")
+    for l in listings[:5]:
+        print(f"    [{l['area']}] {l['address']} rent={l['rent_sek']} size={l['size_sqm']} "
+              f"landlord={l['landlord']}")
+    if len(listings) > 5:
+        print(f"    ... and {len(listings) - 5} more")
+    return listings
+
+
 def run_scrape(debug: bool = False) -> dict:
     with _scrape_lock:
         return _run_scrape_impl(debug=debug)
@@ -752,12 +848,24 @@ def _run_scrape_impl(debug: bool = False) -> dict:
     try:
         login(driver)
         print("scraping listings...")
-        listings = scrape_listings(driver, debug=debug)
+        sssb_listings = scrape_listings(driver, debug=debug)
     finally:
         driver.quit()
+    for l in sssb_listings:
+        l["provider"] = "SSSB"
+        l["landlord"] = "SSSB"
+
+    bf_listings = fetch_bostadsformedlingen()
+    for l in bf_listings:
+        if l["coords"]:
+            l["straight_line"] = straight_line_estimate(tuple(l["coords"]))
+            l["transit_min"] = real_transit_time(tuple(l["coords"]))
+
+    listings = sssb_listings + bf_listings
 
     new_listings = [l for l in listings if l["id"] not in previous_ids]
-    print(f"found {len(listings)} listings ({len(new_listings)} new)")
+    print(f"found {len(listings)} listings total — {len(sssb_listings)} SSSB, "
+          f"{len(bf_listings)} Bostadsförmedlingen ({len(new_listings)} new)")
 
     result = {
         "generated_at": datetime.now(timezone.utc).isoformat(),

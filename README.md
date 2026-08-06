@@ -3,10 +3,13 @@
 A local tool that logs into SSSB, checks what student housing is currently
 available, works out the commute to KTH for each area, and shows it all on
 a map — sorted by ascending queue days, with a refresh button and a desktop
-notification when something new gets published.
+notification when something new gets published. It also pulls in Stockholm's
+**Bostadsförmedlingen** listings alongside SSSB's — that's where Svenska
+Bostäder advertises its student apartments, and it needs no login at all
+(it's a public JSON feed).
 
 Two pieces:
-- `sssb_kth_monitor.py` — runs on your machine, does the actual scraping (via Selenium), commute math, and serves a small local API.
+- `sssb_kth_monitor.py` — runs on your machine: Selenium scraping for SSSB, a plain HTTP fetch for Bostadsförmedlingen, commute math, and a small local API.
 - `sssb_kth_dashboard.html` — the UI. Served by the script itself, so it's all same-origin (no CORS headaches).
 
 ## 1. Why this needs to run on your machine
@@ -100,6 +103,12 @@ format, that's the thing to update.
 This is a five-minute fix once you can see the real markup — I just
 couldn't do that part myself.
 
+This section is SSSB-specific — Bostadsförmedlingen needs no selector
+fixing since `fetch_bostadsformedlingen()` reads a plain JSON feed rather
+than scraped markup. If its field names ever drift, the terminal prints
+the first ad's actual keys on every run, so you can fix the candidate
+names in `_bf_field()` from that alone.
+
 ## 4. Running it
 
 **First time only** — store your login (see "Logging in" above):
@@ -164,6 +173,19 @@ with "Start in" set to this folder.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
   there's no need to hammer their login endpoint, and it's not clear how
   they'd react to it.
+- **Bostadsförmedlingen**: `fetch_bostadsformedlingen()` pulls Stockholm's
+  city housing agency's public ad feed
+  (`bostad.stockholm.se/Lista/AllaAnnonser`) and keeps only the student ads
+  — no login, no API key. Svenska Bostäder doesn't run a separate student
+  queue of its own; their listings show up through this same feed (tagged
+  with a `landlord`). Each ad carries its own coordinates, so these get
+  individual purple pins on the map instead of SSSB's per-area dots, and
+  sort by application deadline instead of queue days, since BF doesn't
+  publish a queue-days figure up front.
+- **Provider filter**: the dashboard's "Provider" chips (top bar) toggle
+  SSSB and Bostadsförmedlingen independently of the SSSB-only "SSSB lines"
+  filter. The "Queues to join" sidebar tab explains how to actually
+  register for each queue.
 
 
 Made by IvarHak on GitHub with the help of Claude Code
