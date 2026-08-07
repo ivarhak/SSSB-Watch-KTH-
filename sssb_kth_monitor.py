@@ -1140,6 +1140,28 @@ def _bf_field(ad: dict, *names, default=None):
     return default
 
 
+# Per-ad link. `bostad.stockholm.se/bostad/<AnnonsId>/` was a guess and it
+# 404s — confirmed 2026-08-08. Rather than ship a dead link, fall back to
+# Bostadsförmedlingen's own search page zoomed onto the ad's coordinates, built
+# only from query parameters observed working on their real search URL
+# (s/n/w/e/sort/student). Set BF_LISTING_URL to a template like
+# "https://bostad.stockholm.se/annons/{id}" once the real pattern is known.
+BF_LISTING_URL_TEMPLATE = os.environ.get("BF_LISTING_URL")
+_BF_SEARCH_URL = "https://bostad.stockholm.se/bostad/"
+
+
+def _bf_listing_url(ad_id, coords) -> str:
+    if BF_LISTING_URL_TEMPLATE and ad_id is not None:
+        return BF_LISTING_URL_TEMPLATE.format(id=ad_id)
+    if coords:
+        lat, lon = coords
+        # ~200m box, so their map opens on this address with the ad visible.
+        return (f"{_BF_SEARCH_URL}?s={lat - 0.002:.5f}&n={lat + 0.002:.5f}"
+                f"&w={lon - 0.004:.5f}&e={lon + 0.004:.5f}"
+                "&sort=annonserad-fran-desc&student=1")
+    return f"{_BF_SEARCH_URL}?student=1"
+
+
 def _bf_truthy(value) -> bool:
     """Coerce a feed value to a boolean. Needed because a JSON "false" or "Nej"
     is a non-empty string, and so truthy in Python — which would have quietly
@@ -1228,7 +1250,9 @@ def fetch_bostadsformedlingen() -> list[dict]:
         return []
     print(f"  feed contains {len(ads)} total ads")
     if ads:
-        print(f"  (first ad's fields: {sorted(ads[0].keys())[:20]}...)")
+        # Full list, not a truncated slice — a missing field can't be diagnosed
+        # from the first 20 keys alphabetically.
+        print(f"  first ad's fields: {sorted(ads[0].keys())}")
 
     # Student housing only — the rest of this feed is the general Stockholm
     # rental queue, which isn't what this tool is for.
@@ -1271,7 +1295,7 @@ def fetch_bostadsformedlingen() -> list[dict]:
             "floor": _bf_field(ad, "Vaning", "Våning", "Floor", "Etage"),
             "deadline": _bf_field(ad, "AnnonseradTill", "SistaAnsokan", "AnmalanSenast"),
             "coords": coords,
-            "url": f"https://bostad.stockholm.se/bostad/{ad_id}/" if ad_id else None,
+            "url": _bf_listing_url(ad_id, coords),
         })
 
     with_coords = sum(1 for l in listings if l["coords"])
@@ -1299,14 +1323,16 @@ def fetch_bostadsformedlingen() -> list[dict]:
 
 
 def run_scrape(debug: bool = False, use_login: bool = False,
-               http_only: bool = False, bike_routes: bool = True) -> dict:
+               http_only: bool = False, bike_routes: bool = True,
+               bf_bike_routes: bool = False) -> dict:
     with _scrape_lock:
         return _run_scrape_impl(debug=debug, use_login=use_login, http_only=http_only,
-                                bike_routes=bike_routes)
+                                bike_routes=bike_routes, bf_bike_routes=bf_bike_routes)
 
 
 def _run_scrape_impl(debug: bool = False, use_login: bool = False,
-                     http_only: bool = False, bike_routes: bool = True) -> dict:
+                     http_only: bool = False, bike_routes: bool = True,
+                     bf_bike_routes: bool = False) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
@@ -1365,10 +1391,20 @@ def _run_scrape_impl(debug: bool = False, use_login: bool = False,
         l["landlord"] = "SSSB"
 
     bf_listings = fetch_bostadsformedlingen()
+    # Bostadsförmedlingen ads get straight-line estimates rather than routed
+    # bike times by default. There are ~100 of them and they churn, so routing
+    # them costs ~100 x len(SCHOOLS) requests — around 700, i.e. ~9 minutes of
+    # paced requests — and most of that work is thrown away as ads rotate. The
+    # 26 SSSB areas are a fixed set worth routing once; these aren't.
+    # `--bike-routes-bf` opts in when you want the accuracy anyway.
+    if bf_listings:
+        print(f"working out commutes for {len(bf_listings)} Bostadsförmedlingen ad(s)"
+              + (" with real cycling routes (slow)..." if bf_bike_routes
+                 else " using straight-line estimates (--bike-routes-bf for real routes)..."))
     for l in bf_listings:
         if l["coords"]:
-            l["per_school"] = commute_to_all_schools(tuple(l["coords"]),
-                                                     with_bike_routes=bike_routes)
+            l["per_school"] = commute_to_all_schools(
+                tuple(l["coords"]), with_bike_routes=bike_routes and bf_bike_routes)
             l["straight_line"] = straight_line_estimate(tuple(l["coords"]))
             l["transit_min"] = l["per_school"][DEFAULT_SCHOOL]["transit_min"]
 
@@ -1404,7 +1440,8 @@ def _run_scrape_impl(debug: bool = False, use_login: bool = False,
 # ── Local API + dashboard server ─────────────────────────────────────────
 
 def _background_poll_loop(interval_minutes: float, use_login: bool = False,
-                          http_only: bool = False, bike_routes: bool = True):
+                          http_only: bool = False, bike_routes: bool = True,
+                          bf_bike_routes: bool = False):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -1413,7 +1450,8 @@ def _background_poll_loop(interval_minutes: float, use_login: bool = False,
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(use_login=use_login, http_only=http_only, bike_routes=bike_routes)
+            run_scrape(use_login=use_login, http_only=http_only, bike_routes=bike_routes,
+                       bf_bike_routes=bf_bike_routes)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
@@ -1421,7 +1459,8 @@ def _background_poll_loop(interval_minutes: float, use_login: bool = False,
 
 
 def serve(interval_minutes: float, use_login: bool = False,
-          http_only: bool = False, bike_routes: bool = True):
+          http_only: bool = False, bike_routes: bool = True,
+          bf_bike_routes: bool = False):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -1441,7 +1480,7 @@ def serve(interval_minutes: float, use_login: bool = False,
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
         return jsonify(run_scrape(use_login=use_login, http_only=http_only,
-                                  bike_routes=bike_routes))
+                                  bike_routes=bike_routes, bf_bike_routes=bf_bike_routes))
 
     @app.route("/api/status")
     def api_status():
@@ -1462,10 +1501,10 @@ def serve(interval_minutes: float, use_login: bool = False,
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
         return jsonify(run_scrape(use_login=use_login, http_only=http_only,
-                                  bike_routes=bike_routes))
+                                  bike_routes=bike_routes, bf_bike_routes=bf_bike_routes))
 
     threading.Thread(target=_background_poll_loop,
-                     args=(interval_minutes, use_login, http_only, bike_routes),
+                     args=(interval_minutes, use_login, http_only, bike_routes, bf_bike_routes),
                      daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
@@ -1480,6 +1519,11 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="scrape once, save, notify, exit")
     parser.add_argument("--serve", action="store_true", help="start local dashboard + API server")
     parser.add_argument("--interval", type=float, default=15, help="minutes between auto-checks in --serve mode (default: 15)")
+    parser.add_argument("--bike-routes-bf", action="store_true",
+                        help="also compute real cycling routes for Bostadsförmedlingen ads. Off by "
+                             "default: there are ~100 of them and they rotate, so it costs roughly "
+                             "700 paced requests (~9 min) per run for work largely discarded as ads "
+                             "change. SSSB's 26 fixed areas are always routed")
     parser.add_argument("--no-bike-routes", action="store_true",
                         help="skip real cycling directions and use the old straight-line estimate. "
                              "Faster on a cold cache (the first run otherwise routes every area to "
@@ -1504,7 +1548,8 @@ if __name__ == "__main__":
         print("Done — future runs will use this automatically.")
     elif args.once:
         run_scrape(debug=args.debug, use_login=args.with_login,
-                   http_only=args.http_only, bike_routes=not args.no_bike_routes)
+                   http_only=args.http_only, bike_routes=not args.no_bike_routes,
+                   bf_bike_routes=args.bike_routes_bf)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
@@ -1521,9 +1566,11 @@ if __name__ == "__main__":
                   f"next auto-check in under {args.interval:g} min")
         if age is None or age > args.interval:
             run_scrape(debug=args.debug, use_login=args.with_login,
-                       http_only=args.http_only, bike_routes=not args.no_bike_routes)
+                       http_only=args.http_only, bike_routes=not args.no_bike_routes,
+                       bf_bike_routes=args.bike_routes_bf)
         serve(interval_minutes=args.interval, use_login=args.with_login,
-              http_only=args.http_only, bike_routes=not args.no_bike_routes)
+              http_only=args.http_only, bike_routes=not args.no_bike_routes,
+              bf_bike_routes=args.bike_routes_bf)
     else:
         parser.print_help()
         sys.exit(1)

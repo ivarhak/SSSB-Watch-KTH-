@@ -242,6 +242,14 @@ with "Start in" set to this folder.
   tolerantly, so a renamed field shows up as a loud terminal warning listing
   the ad's real keys rather than silently returning zero listings. If the feed
   moves again, `BF_ADS_URL=<url>` overrides it without editing the script.
+- **Clicking a Bostadsförmedlingen listing** opens their own search page zoomed
+  to that address, not a per-ad page — their detail-URL pattern isn't known
+  (`/bostad/<id>/` 404s). If you find it, set
+  `BF_LISTING_URL="https://…/{id}"` and links become ad-specific.
+- **Bostadsförmedlingen ads use straight-line bike estimates**, not routed
+  ones, so a scrape stays quick: there are ~100 of them and they rotate, so
+  routing them all costs ~700 paced requests (about 9 minutes) per run. The 26
+  SSSB areas are a fixed set and always routed. `--bike-routes-bf` opts in.
 - **Desktop notifications** need nothing extra on macOS — the script uses the
   built-in `osascript`. (`plyer`, listed in requirements, needs a compiled
   `pyobjus` extension that often won't install; it's only a fallback for
