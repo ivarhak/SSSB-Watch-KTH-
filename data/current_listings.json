@@ -16,7 +16,65 @@
         "bike_min": 41,
         "walk_min": 114
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 9.49,
+          "bike_min": 41,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 114,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 7.53,
+          "bike_min": 33,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 90,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 9.37,
+          "bike_min": 40,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 112,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 10.0,
+          "bike_min": 43,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 120,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 15.06,
+          "bike_min": 63,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 181,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 9.81,
+          "bike_min": 42,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 118,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 12.0,
+          "bike_min": 51,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 144,
+          "transit_min": null
+        }
+      }
     },
     "Frösunda": {
       "group": "North",
@@ -29,7 +87,65 @@
         "bike_min": 19,
         "walk_min": 48
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 3.98,
+          "bike_min": 19,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 48,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.61,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 31,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.24,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 27,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.75,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 45,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 7.61,
+          "bike_min": 33,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 91,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 4.59,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 55,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 6.12,
+          "bike_min": 27,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 73,
+          "transit_min": null
+        }
+      }
     },
     "Kungshamra": {
       "group": "North",
@@ -42,7 +158,65 @@
         "bike_min": 22,
         "walk_min": 56
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 4.69,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 56,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.76,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 33,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 3.74,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 45,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 4.81,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 58,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 9.34,
+          "bike_min": 40,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 112,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 5.22,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 63,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 7.13,
+          "bike_min": 32,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 86,
+          "transit_min": null
+        }
+      }
     },
     "Lappkärrsberget": {
       "group": "North",
@@ -55,7 +229,65 @@
         "bike_min": 14,
         "walk_min": 32
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 2.66,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 32,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 0.68,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 8,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 3.05,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 37,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.16,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 38,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 8.69,
+          "bike_min": 38,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 104,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 3.07,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 37,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 5.19,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 62,
+          "transit_min": null
+        }
+      }
     },
     "Pax": {
       "group": "North",
@@ -68,7 +300,65 @@
         "bike_min": 19,
         "walk_min": 48
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 3.99,
+          "bike_min": 19,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 48,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.77,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 45,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 1.51,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 18,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.25,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 39,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.38,
+          "bike_min": 25,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 65,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 4.58,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 55,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 5.27,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 63,
+          "transit_min": null
+        }
+      }
     },
     "Strix": {
       "group": "North",
@@ -81,7 +371,65 @@
         "bike_min": 18,
         "walk_min": 46
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 3.85,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 46,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.56,
+          "bike_min": 17,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 43,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 1.37,
+          "bike_min": 8,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 16,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.15,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 38,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.58,
+          "bike_min": 25,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 67,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 4.45,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 53,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 5.24,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 63,
+          "transit_min": null
+        }
+      }
     },
     "Balder": {
       "group": "South",
@@ -94,7 +442,65 @@
         "bike_min": 36,
         "walk_min": 98
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 8.19,
+          "bike_min": 36,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 98,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 9.75,
+          "bike_min": 42,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 117,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 10.53,
+          "bike_min": 45,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 126,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 8.71,
+          "bike_min": 38,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 104,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 11.78,
+          "bike_min": 50,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 141,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 7.57,
+          "bike_min": 33,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 91,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 6.81,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 82,
+          "transit_min": null
+        }
+      }
     },
     "Birka": {
       "group": "South",
@@ -107,7 +513,65 @@
         "bike_min": 31,
         "walk_min": 84
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 6.96,
+          "bike_min": 31,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 84,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 8.99,
+          "bike_min": 39,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 108,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 8.39,
+          "bike_min": 37,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 101,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 6.83,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 82,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 7.17,
+          "bike_min": 32,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 86,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 6.53,
+          "bike_min": 29,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 78,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 4.48,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 54,
+          "transit_min": null
+        }
+      }
     },
     "Embla": {
       "group": "South",
@@ -120,7 +584,65 @@
         "bike_min": 23,
         "walk_min": 61
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 5.05,
+          "bike_min": 23,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 61,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 7.08,
+          "bike_min": 31,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 85,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 6.41,
+          "bike_min": 29,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 77,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 4.86,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 58,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.92,
+          "bike_min": 27,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 71,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 4.67,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 56,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.53,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 30,
+          "transit_min": null
+        }
+      }
     },
     "Flemingsberg": {
       "group": "South",
@@ -133,7 +655,65 @@
         "bike_min": 65,
         "walk_min": 187
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 15.62,
+          "bike_min": 65,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 187,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 17.03,
+          "bike_min": 71,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 204,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 14.74,
+          "bike_min": 62,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 177,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 14.74,
+          "bike_min": 62,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 177,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 9.0,
+          "bike_min": 39,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 108,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 15.7,
+          "bike_min": 66,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 188,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 13.88,
+          "bike_min": 59,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 167,
+          "transit_min": null
+        }
+      }
     },
     "Skärmarbrink": {
       "group": "South",
@@ -146,7 +726,65 @@
         "bike_min": 27,
         "walk_min": 71
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 5.88,
+          "bike_min": 27,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 71,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 7.9,
+          "bike_min": 35,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 95,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 7.03,
+          "bike_min": 31,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 84,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 5.59,
+          "bike_min": 25,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 67,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.7,
+          "bike_min": 26,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 68,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 5.53,
+          "bike_min": 25,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 66,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 3.35,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 40,
+          "transit_min": null
+        }
+      }
     },
     "Apeln": {
       "group": "City",
@@ -159,7 +797,65 @@
         "bike_min": 9,
         "walk_min": 17
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 1.43,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 17,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.18,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 38,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.33,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 28,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.72,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 9,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.43,
+          "bike_min": 25,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 65,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.6,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 19,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 1.74,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 21,
+          "transit_min": null
+        }
+      }
     },
     "Domus": {
       "group": "City",
@@ -172,7 +868,65 @@
         "bike_min": 5,
         "walk_min": 6
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 0.49,
+          "bike_min": 5,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 6,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 1.71,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 20,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.04,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 24,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.87,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 10,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 6.73,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 81,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.12,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 13,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.88,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 35,
+          "transit_min": null
+        }
+      }
     },
     "Forum": {
       "group": "City",
@@ -185,7 +939,65 @@
         "bike_min": 5,
         "walk_min": 5
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 0.41,
+          "bike_min": 5,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 5,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 1.76,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 21,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.11,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 25,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.86,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 10,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 6.74,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 81,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.03,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 12,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.81,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 34,
+          "transit_min": null
+        }
+      }
     },
     "Fyrtalet": {
       "group": "City",
@@ -198,7 +1010,65 @@
         "bike_min": 10,
         "walk_min": 21
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 1.78,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 21,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.05,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 37,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 4.25,
+          "bike_min": 20,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 51,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 2.67,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 32,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 8.13,
+          "bike_min": 36,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 98,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.25,
+          "bike_min": 8,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 15,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.8,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 34,
+          "transit_min": null
+        }
+      }
     },
     "Hugin & Munin": {
       "group": "City",
@@ -211,7 +1081,65 @@
         "bike_min": 12,
         "walk_min": 27
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 2.25,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 27,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.53,
+          "bike_min": 17,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 42,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 4.73,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 57,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.1,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 37,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 8.39,
+          "bike_min": 37,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 101,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.68,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 20,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.9,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 35,
+          "transit_min": null
+        }
+      }
     },
     "Idun": {
       "group": "City",
@@ -224,7 +1152,65 @@
         "bike_min": 12,
         "walk_min": 28
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 2.37,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 28,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.75,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 33,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 0.46,
+          "bike_min": 5,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 6,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 1.58,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 19,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.37,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 64,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 2.93,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 35,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 3.69,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 44,
+          "transit_min": null
+        }
+      }
     },
     "Jerum": {
       "group": "City",
@@ -237,7 +1223,65 @@
         "bike_min": 8,
         "walk_min": 16
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 1.34,
+          "bike_min": 8,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 16,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.61,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 31,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 3.8,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 46,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 2.27,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 27,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 7.89,
+          "bike_min": 35,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 95,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 0.88,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 11,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.77,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 33,
+          "transit_min": null
+        }
+      }
     },
     "Kurland": {
       "group": "City",
@@ -250,7 +1294,65 @@
         "bike_min": 8,
         "walk_min": 14
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 1.18,
+          "bike_min": 8,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 14,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.84,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 34,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.07,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 25,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.37,
+          "bike_min": 4,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 4,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.64,
+          "bike_min": 26,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 68,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.48,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 18,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.04,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 24,
+          "transit_min": null
+        }
+      }
     },
     "Lucidor": {
       "group": "City",
@@ -263,7 +1365,65 @@
         "bike_min": 13,
         "walk_min": 29
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 2.44,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 29,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 4.4,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 53,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 3.58,
+          "bike_min": 17,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 43,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 2.03,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 24,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.14,
+          "bike_min": 24,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 62,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 2.28,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 27,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 0.66,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 8,
+          "transit_min": null
+        }
+      }
     },
     "Marieberg": {
       "group": "City",
@@ -276,7 +1436,65 @@
         "bike_min": 18,
         "walk_min": 44
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 3.63,
+          "bike_min": 18,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 44,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 4.71,
+          "bike_min": 22,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 57,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.48,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 30,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 2.65,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 32,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 3.34,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 40,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 3.97,
+          "bike_min": 19,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 48,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 3.46,
+          "bike_min": 17,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 41,
+          "transit_min": null
+        }
+      }
     },
     "Mjölner": {
       "group": "City",
@@ -289,7 +1507,65 @@
         "bike_min": 6,
         "walk_min": 8
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 0.68,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 8,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 2.47,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 30,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 3.16,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 38,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 1.53,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 18,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 7.15,
+          "bike_min": 32,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 86,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 0.13,
+          "bike_min": 4,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 2,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.3,
+          "bike_min": 12,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 28,
+          "transit_min": null
+        }
+      }
     },
     "Nyponet": {
       "group": "City",
@@ -302,7 +1578,65 @@
         "bike_min": 5,
         "walk_min": 7
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 0.59,
+          "bike_min": 5,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 7,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 1.63,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 20,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 1.97,
+          "bike_min": 11,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 24,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.9,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 11,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 6.74,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 81,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.21,
+          "bike_min": 8,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 15,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.97,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 36,
+          "transit_min": null
+        }
+      }
     },
     "Roslagstull": {
       "group": "City",
@@ -315,7 +1649,65 @@
         "bike_min": 7,
         "walk_min": 11
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 0.91,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 11,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 1.4,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 17,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 1.76,
+          "bike_min": 10,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 21,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 1.08,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 13,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 6.8,
+          "bike_min": 30,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 82,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.53,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 18,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 3.27,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 39,
+          "transit_min": null
+        }
+      }
     },
     "Tanto": {
       "group": "City",
@@ -328,7 +1720,65 @@
         "bike_min": 20,
         "walk_min": 51
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 4.29,
+          "bike_min": 20,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 51,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 6.02,
+          "bike_min": 27,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 72,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 4.4,
+          "bike_min": 21,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 53,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 3.55,
+          "bike_min": 17,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 43,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 3.23,
+          "bike_min": 16,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 39,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 4.28,
+          "bike_min": 20,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 51,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 2.55,
+          "bike_min": 13,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 31,
+          "transit_min": null
+        }
+      }
     },
     "Vätan": {
       "group": "City",
@@ -341,7 +1791,65 @@
         "bike_min": 7,
         "walk_min": 13
       },
-      "transit_min": null
+      "transit_min": null,
+      "per_school": {
+        "KTH": {
+          "distance_km": 1.05,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 13,
+          "transit_min": null
+        },
+        "SU": {
+          "distance_km": 3.0,
+          "bike_min": 15,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 36,
+          "transit_min": null
+        },
+        "KI": {
+          "distance_km": 2.63,
+          "bike_min": 14,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 32,
+          "transit_min": null
+        },
+        "SSE": {
+          "distance_km": 0.81,
+          "bike_min": 6,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 10,
+          "transit_min": null
+        },
+        "Konstfack": {
+          "distance_km": 5.94,
+          "bike_min": 27,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 71,
+          "transit_min": null
+        },
+        "KMH": {
+          "distance_km": 1.08,
+          "bike_min": 7,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 13,
+          "transit_min": null
+        },
+        "KKH": {
+          "distance_km": 1.61,
+          "bike_min": 9,
+          "bike_km": null,
+          "bike_source": "estimate",
+          "walk_min": 19,
+          "transit_min": null
+        }
+      }
     }
   },
   "listings": [
@@ -1486,5 +2994,57 @@
       "el_included": true
     }
   ],
-  "new_listing_ids": []
+  "new_listing_ids": [],
+  "schools": {
+    "KTH": {
+      "name": "KTH Royal Institute of Technology",
+      "coords": [
+        59.3467,
+        18.0716
+      ]
+    },
+    "SU": {
+      "name": "Stockholm University",
+      "coords": [
+        59.36397,
+        18.06002
+      ]
+    },
+    "KI": {
+      "name": "Karolinska Institutet",
+      "coords": [
+        59.34848,
+        18.0279
+      ]
+    },
+    "SSE": {
+      "name": "Stockholm School of Economics",
+      "coords": [
+        59.3417,
+        18.05726
+      ]
+    },
+    "Konstfack": {
+      "name": "Konstfack",
+      "coords": [
+        59.29977,
+        17.99421
+      ]
+    },
+    "KMH": {
+      "name": "Royal College of Music",
+      "coords": [
+        59.34447,
+        18.08172
+      ]
+    },
+    "KKH": {
+      "name": "Royal Institute of Art",
+      "coords": [
+        59.32458,
+        18.08213
+      ]
+    }
+  },
+  "default_school": "KTH"
 }

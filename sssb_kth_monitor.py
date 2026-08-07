@@ -72,16 +72,41 @@ LISTINGS_URL = "https://minasidor.sssb.se/lediga-bostader/?pagination=1&paginati
 # covers both of Ivar's requested extra sources.
 BF_ALL_ADS_URL = "https://bostad.stockholm.se/Lista/AllaAnnonser"
 
+# Real cycling directions, no API key: FOSSGIS's public Valhalla instance,
+# which routes over OSM's actual bike network instead of pretending a straight
+# line is a road. Community-run, so results are cached to disk and requests are
+# paced — and every failure degrades to the old haversine estimate rather than
+# breaking the run. The response shape below is per Valhalla's documented
+# `trip.summary` and has NOT been verified against the live service from here.
+BIKE_ROUTER_URL = "https://valhalla1.openstreetmap.de/route"
+
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 CURRENT_FILE = DATA_DIR / "current_listings.json"
 GEOCODE_CACHE_FILE = DATA_DIR / "geocode_cache.json"
+BIKE_ROUTE_CACHE_FILE = DATA_DIR / "bike_route_cache.json"
 DEBUG_HTML_FILE = Path(__file__).parent / "debug_page.html"
 
 PORT = int(os.environ.get("PORT", 5055))
 
-# KTH main campus, Valhallavägen 79, Stockholm — well-established coordinates.
-KTH_COORDS = (59.3467, 18.0716)
+# Stockholm campuses you can centre the map on, picked from the dashboard's
+# dropdown. These were already in the dashboard as reference pins; they live
+# here now so the server can work out the commute to each one and the two lists
+# can't drift apart. Keys are the short names the dashboard shows.
+SCHOOLS = {
+    # KTH main campus, Valhallavägen 79 — well-established coordinates.
+    "KTH":       {"name": "KTH Royal Institute of Technology", "coords": (59.3467, 18.0716)},
+    "SU":        {"name": "Stockholm University",              "coords": (59.36397, 18.06002)},
+    "KI":        {"name": "Karolinska Institutet",             "coords": (59.34848, 18.02790)},
+    "SSE":       {"name": "Stockholm School of Economics",     "coords": (59.34170, 18.05726)},
+    "Konstfack": {"name": "Konstfack",                         "coords": (59.29977, 17.99421)},
+    "KMH":       {"name": "Royal College of Music",            "coords": (59.34447, 18.08172)},
+    "KKH":       {"name": "Royal Institute of Art",            "coords": (59.32458, 18.08213)},
+}
+DEFAULT_SCHOOL = "KTH"
+# Kept as its own name because it's referenced all over, and because KTH stays
+# the default centre — this started life as a KTH tool.
+KTH_COORDS = SCHOOLS[DEFAULT_SCHOOL]["coords"]
 
 # The 26 SSSB housing areas, grouped exactly the way SSSB groups them on
 # sssb.se/en/our-homes/ (North / South / City).
@@ -262,9 +287,9 @@ def haversine_km(a: tuple, b: tuple) -> float:
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
-def straight_line_estimate(coords: tuple) -> dict:
+def straight_line_estimate(coords: tuple, target: tuple | None = None) -> dict:
     """Rough, no-API-needed estimate. Not a real route — just a sanity check."""
-    km = haversine_km(coords, KTH_COORDS)
+    km = haversine_km(coords, target or KTH_COORDS)
     return {
         "distance_km": round(km, 2),
         # crude rule of thumb for Stockholm: biking ~15km/h + 3 min overhead,
@@ -272,6 +297,107 @@ def straight_line_estimate(coords: tuple) -> dict:
         "bike_min": round(km / 15 * 60 + 3),
         "walk_min": round(km / 5 * 60),
     }
+
+
+_bike_cache = None
+# Circuit breaker: if the router is down, stop after a few failures instead of
+# waiting on ~180 timeouts. Reset per process, not per scrape.
+_bike_failures = 0
+_BIKE_GIVE_UP_AFTER = 3
+
+
+def _load_bike_cache() -> dict:
+    global _bike_cache
+    if _bike_cache is None:
+        _bike_cache = (json.loads(BIKE_ROUTE_CACHE_FILE.read_text())
+                       if BIKE_ROUTE_CACHE_FILE.exists() else {})
+    return _bike_cache
+
+
+def _save_bike_cache():
+    if _bike_cache is not None:
+        BIKE_ROUTE_CACHE_FILE.write_text(json.dumps(_bike_cache, indent=2))
+
+
+def bike_route(origin: tuple, target: tuple) -> dict | None:
+    """Real cycling time + distance between two points, or None if unavailable.
+
+    Cached to data/bike_route_cache.json keyed by rounded coordinates: the 26
+    SSSB areas never move, so after the first run this is free. Delete that
+    file to re-route from scratch.
+    """
+    global _bike_failures
+    if _bike_failures >= _BIKE_GIVE_UP_AFTER:
+        return None
+
+    cache = _load_bike_cache()
+    key = (f"{origin[0]:.5f},{origin[1]:.5f}>{target[0]:.5f},{target[1]:.5f}")
+    if key in cache:
+        return cache[key]
+
+    try:
+        resp = requests.post(
+            BIKE_ROUTER_URL,
+            json={
+                "locations": [
+                    {"lat": origin[0], "lon": origin[1]},
+                    {"lat": target[0], "lon": target[1]},
+                ],
+                "costing": "bicycle",
+                "directions_options": {"units": "kilometers"},
+            },
+            headers={"User-Agent": "sssb-kth-commute-tool/1.0 (personal use)"},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        summary = resp.json()["trip"]["summary"]
+        result = {
+            "minutes": round(float(summary["time"]) / 60),
+            "distance_km": round(float(summary["length"]), 2),
+        }
+    except (requests.RequestException, KeyError, TypeError, ValueError) as e:
+        _bike_failures += 1
+        print(f"  ! bike routing failed ({e}) — falling back to the straight-line estimate"
+              + (f"; giving up on routing for this run after {_bike_failures} failures"
+                 if _bike_failures >= _BIKE_GIVE_UP_AFTER else ""))
+        return None
+
+    cache[key] = result
+    _save_bike_cache()
+    time.sleep(0.4)  # be polite to a free community service
+    return result
+
+
+def commute_to_all_schools(coords: tuple, with_transit: bool = True,
+                           with_bike_routes: bool = True) -> dict:
+    """Distance/bike/walk (and transit, if a Resrobot key is set) from `coords`
+    to every campus in SCHOOLS, keyed by short name.
+
+    The dashboard's campus dropdown reads this, so switching schools re-filters
+    and re-sorts against real numbers rather than re-using KTH's.
+
+    NOTE ON API COST: the straight-line half is pure maths and free, but the
+    transit half costs one Resrobot trip lookup per school per location — so
+    setting RESROBOT_API_KEY multiplies request volume by len(SCHOOLS). Raise
+    `--interval` if you start hitting Trafiklab's quota.
+    """
+    out = {}
+    for sid, school in SCHOOLS.items():
+        target = school["coords"]
+        est = straight_line_estimate(coords, target)
+        route = bike_route(coords, target) if with_bike_routes else None
+        out[sid] = {
+            "distance_km": est["distance_km"],       # straight line, always present
+            "bike_min": route["minutes"] if route else est["bike_min"],
+            "bike_km": route["distance_km"] if route else None,
+            # "route" = real cycling directions; "estimate" = haversine + a
+            # crude speed guess. Surfaced so the dashboard can avoid presenting
+            # a guess as though it were measured.
+            "bike_source": "route" if route else "estimate",
+            "walk_min": est["walk_min"],
+            "transit_min": real_transit_time(coords, target) if with_transit else None,
+        }
+    return out
 
 
 _resrobot_stop_cache = {}
@@ -302,15 +428,15 @@ def _nearest_stop_id(coords: tuple) -> str | None:
         return None
 
 
-def real_transit_time(coords: tuple) -> int | None:
-    """Real public-transit journey time (minutes) to KTH via Resrobot.
-    Returns None if RESROBOT_API_KEY isn't set or the lookup fails —
-    the dashboard just shows the straight-line estimate in that case.
+def real_transit_time(coords: tuple, target: tuple | None = None) -> int | None:
+    """Real public-transit journey time (minutes) to `target` (default KTH)
+    via Resrobot. Returns None if RESROBOT_API_KEY isn't set or the lookup
+    fails — the dashboard falls back to the straight-line estimate then.
     """
     if not RESROBOT_API_KEY:
         return None
     origin_id = _nearest_stop_id(coords)
-    dest_id = _nearest_stop_id(KTH_COORDS)
+    dest_id = _nearest_stop_id(target or KTH_COORDS)
     if not origin_id or not dest_id:
         return None
     try:
@@ -998,28 +1124,39 @@ def fetch_bostadsformedlingen() -> list[dict]:
 
 
 def run_scrape(debug: bool = False, use_login: bool = False,
-               http_only: bool = False) -> dict:
+               http_only: bool = False, bike_routes: bool = True) -> dict:
     with _scrape_lock:
-        return _run_scrape_impl(debug=debug, use_login=use_login, http_only=http_only)
+        return _run_scrape_impl(debug=debug, use_login=use_login, http_only=http_only,
+                                bike_routes=bike_routes)
 
 
 def _run_scrape_impl(debug: bool = False, use_login: bool = False,
-                     http_only: bool = False) -> dict:
+                     http_only: bool = False, bike_routes: bool = True) -> dict:
     print(f"[{datetime.now().isoformat(timespec='seconds')}] starting scrape...")
     previous = load_previous()
     previous_ids = {l["id"] for l in previous["listings"]}
 
     geocode_cache = _load_geocode_cache()
     print("geocoding areas (cached after first run)...")
+    if bike_routes:
+        print(f"working out cycling routes to {len(SCHOOLS)} campuses "
+              "(real bike directions, cached to data/bike_route_cache.json — "
+              "the first run is slow, later ones aren't)...")
     area_info = {}
     for group, names in AREAS.items():
         for name in names:
             coords = geocode_area(name, geocode_cache)
+            per_school = (commute_to_all_schools(coords, with_bike_routes=bike_routes)
+                          if coords else None)
             area_info[name] = {
                 "group": group,
                 "coords": coords,
+                # Per-campus numbers drive the dashboard's campus dropdown.
+                "per_school": per_school,
+                # Kept at the top level too, pointing at the default campus, so
+                # older saved files and any code reading the old shape still work.
                 "straight_line": straight_line_estimate(coords) if coords else None,
-                "transit_min": real_transit_time(coords) if coords else None,
+                "transit_min": per_school[DEFAULT_SCHOOL]["transit_min"] if per_school else None,
             }
 
     sssb_listings = None
@@ -1055,8 +1192,10 @@ def _run_scrape_impl(debug: bool = False, use_login: bool = False,
     bf_listings = fetch_bostadsformedlingen()
     for l in bf_listings:
         if l["coords"]:
+            l["per_school"] = commute_to_all_schools(tuple(l["coords"]),
+                                                     with_bike_routes=bike_routes)
             l["straight_line"] = straight_line_estimate(tuple(l["coords"]))
-            l["transit_min"] = real_transit_time(tuple(l["coords"]))
+            l["transit_min"] = l["per_school"][DEFAULT_SCHOOL]["transit_min"]
 
     listings = sssb_listings + bf_listings
 
@@ -1064,9 +1203,20 @@ def _run_scrape_impl(debug: bool = False, use_login: bool = False,
     print(f"found {len(listings)} listings total — {len(sssb_listings)} SSSB, "
           f"{len(bf_listings)} Bostadsförmedlingen ({len(new_listings)} new)")
 
+    routed = sum(1 for a in area_info.values()
+                 if a["per_school"] and a["per_school"][DEFAULT_SCHOOL]["bike_source"] == "route")
+    if bike_routes:
+        print(f"bike times: {routed} of {len(area_info)} area(s) from real cycling routes, "
+              f"{len(area_info) - routed} from the straight-line estimate")
+
     result = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "kth_coords": KTH_COORDS,
+        # The dashboard builds its campus dropdown from this, so the two lists
+        # can't drift apart.
+        "schools": {sid: {"name": sc["name"], "coords": list(sc["coords"])}
+                    for sid, sc in SCHOOLS.items()},
+        "default_school": DEFAULT_SCHOOL,
         "areas": area_info,
         "listings": listings,
         "new_listing_ids": [l["id"] for l in new_listings],
@@ -1079,7 +1229,7 @@ def _run_scrape_impl(debug: bool = False, use_login: bool = False,
 # ── Local API + dashboard server ─────────────────────────────────────────
 
 def _background_poll_loop(interval_minutes: float, use_login: bool = False,
-                          http_only: bool = False):
+                          http_only: bool = False, bike_routes: bool = True):
     """Runs for the lifetime of `--serve`, re-scraping on its own so you
     don't have to sit there clicking Refresh. Any failure (SSSB hiccup,
     network blip) is logged and skipped rather than killing the loop.
@@ -1088,7 +1238,7 @@ def _background_poll_loop(interval_minutes: float, use_login: bool = False,
         time.sleep(interval_minutes * 60)
         try:
             print(f"[{datetime.now().isoformat(timespec='seconds')}] auto-check...")
-            run_scrape(use_login=use_login, http_only=http_only)
+            run_scrape(use_login=use_login, http_only=http_only, bike_routes=bike_routes)
         except SystemExit as e:
             print(f"  ! auto-check stopped early: {e}")
         except Exception as e:
@@ -1096,7 +1246,7 @@ def _background_poll_loop(interval_minutes: float, use_login: bool = False,
 
 
 def serve(interval_minutes: float, use_login: bool = False,
-          http_only: bool = False):
+          http_only: bool = False, bike_routes: bool = True):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -1115,14 +1265,17 @@ def serve(interval_minutes: float, use_login: bool = False,
             data = json.loads(CURRENT_FILE.read_text())
             data["poll_interval_min"] = interval_minutes
             return jsonify(data)
-        return jsonify(run_scrape(use_login=use_login, http_only=http_only))
+        return jsonify(run_scrape(use_login=use_login, http_only=http_only,
+                                  bike_routes=bike_routes))
 
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
-        return jsonify(run_scrape(use_login=use_login, http_only=http_only))
+        return jsonify(run_scrape(use_login=use_login, http_only=http_only,
+                                  bike_routes=bike_routes))
 
     threading.Thread(target=_background_poll_loop,
-                     args=(interval_minutes, use_login, http_only), daemon=True).start()
+                     args=(interval_minutes, use_login, http_only, bike_routes),
+                     daemon=True).start()
 
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
@@ -1136,6 +1289,10 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="scrape once, save, notify, exit")
     parser.add_argument("--serve", action="store_true", help="start local dashboard + API server")
     parser.add_argument("--interval", type=float, default=15, help="minutes between auto-checks in --serve mode (default: 15)")
+    parser.add_argument("--no-bike-routes", action="store_true",
+                        help="skip real cycling directions and use the old straight-line estimate. "
+                             "Faster on a cold cache (the first run otherwise routes every area to "
+                             "every campus), and a way out if the routing service is down")
     parser.add_argument("--http-only", action="store_true",
                         help="never launch a browser: read SSSB over plain HTTP and fail loudly if that "
                              "isn't possible, instead of quietly falling back to Selenium. Useful for "
@@ -1156,15 +1313,15 @@ if __name__ == "__main__":
         print("Done — future runs will use this automatically.")
     elif args.once:
         run_scrape(debug=args.debug, use_login=args.with_login,
-                   http_only=args.http_only)
+                   http_only=args.http_only, bike_routes=not args.no_bike_routes)
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
         if not CURRENT_FILE.exists():
             run_scrape(debug=args.debug, use_login=args.with_login,
-                       http_only=args.http_only)
+                       http_only=args.http_only, bike_routes=not args.no_bike_routes)
         serve(interval_minutes=args.interval, use_login=args.with_login,
-              http_only=args.http_only)
+              http_only=args.http_only, bike_routes=not args.no_bike_routes)
     else:
         parser.print_help()
         sys.exit(1)

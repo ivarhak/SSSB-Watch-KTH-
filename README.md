@@ -1,7 +1,7 @@
 # SSSB → KTH housing finder
 
 A local tool that checks what SSSB student housing is currently available,
-works out the commute to KTH for each area, and shows it all on a map —
+works out the commute to your campus for each area, and shows it all on a map —
 sorted by ascending queue days, with a refresh button and a desktop
 notification when something new gets published. It also pulls in Stockholm's
 **Bostadsförmedlingen** listings alongside SSSB's — that's where Svenska
@@ -172,6 +172,22 @@ with "Start in" set to this folder.
   OpenStreetMap (free, no key) and cached in `data/geocode_cache.json`. If a
   pin looks wrong on the map, open that file and hand-correct the
   `[lat, lon]` for that area.
+- **Campus dropdown**: the "Campus" picker in the top bar re-centres the map
+  and recomputes every commute from that school instead of KTH, so the max-
+  commute slider, the sorting and the map counts all follow. KTH is the
+  default. You can also click any of the other campus pins on the map to
+  switch to it. Seven Stockholm schools are built in (KTH, SU, KI, SSE,
+  Konstfack, KMH, KKH) — add more in `SCHOOLS` in `sssb_kth_monitor.py` and
+  the dropdown picks them up automatically.
+- **Bike times are real routes, not straight lines.** They come from
+  [FOSSGIS's public Valhalla](https://valhalla1.openstreetmap.de/) routing
+  service over OSM's cycling network — free, no key. Results are cached in
+  `data/bike_route_cache.json`, so the first run is slow (it routes each area
+  to each campus) and later runs are instant. A listing's row shows
+  `12 min bike` for a routed time and `~12 min bike` for a fallback estimate,
+  so you can always tell which you're looking at. If the service is
+  unreachable the run says so and falls back to the old straight-line guess
+  rather than failing; `--no-bike-routes` skips routing entirely.
 - **Filtering far-away areas**: the "Max commute" slider in the dashboard
   hides areas beyond that many minutes (transit time if you set up
   Resrobot, otherwise the bike estimate). Flemingsberg in particular is

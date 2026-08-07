@@ -85,6 +85,20 @@
     letter-spacing:0.08em;
     color:var(--paper-dim);
   }
+  #schoolSelect{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper);
+    background:var(--navy-800);
+    border:1px solid var(--navy-600);
+    border-radius:8px;
+    padding:7px 10px;
+    cursor:pointer;
+    max-width:210px;
+  }
+  #schoolSelect:hover{border-color:var(--line-north);}
+  #schoolSelect:focus-visible{outline:2px solid var(--line-north);outline-offset:2px;}
+
   .slider-row{display:flex;align-items:center;gap:8px;}
   .slider-row span{
     font-family:var(--mono);font-size:11.5px;min-width:68px;
@@ -428,9 +442,14 @@
   <div class="brand">
     <span class="dot"></span>
     <div>
-      <h1>SSSB → KTH housing finder</h1>
+      <h1 id="brandTitle">SSSB → KTH housing finder</h1>
       <div class="sub">SSSB + Bostadsförmedlingen, sorted for you</div>
     </div>
+  </div>
+
+  <div class="control">
+    <label>Campus</label>
+    <select id="schoolSelect" title="Centre the map and measure commutes from here"></select>
   </div>
 
   <div class="control">
@@ -582,17 +601,53 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-const KTH = [59.3467, 18.0716];
-// Other Stockholm universities, shown as small reference pins — just
-// landmarks, not part of any SSSB-area logic.
-const OTHER_SCHOOLS = [
-  { name: 'Stockholm University', coords: [59.36397, 18.06002] },
-  { name: 'Karolinska Institutet', coords: [59.34848, 18.02790] },
-  { name: 'Stockholm School of Economics', coords: [59.34170, 18.05726] },
-  { name: 'Konstfack', coords: [59.29977, 17.99421] },
-  { name: 'Royal College of Music', coords: [59.34447, 18.08172] },
-  { name: 'Royal Institute of Art', coords: [59.32458, 18.08213] },
-];
+// Campuses you can centre on. The server sends this list (so it can compute
+// the commute to each one) — this copy is the fallback for the demo data and
+// for opening this file without the server.
+const FALLBACK_SCHOOLS = {
+  KTH:        { name: 'KTH Royal Institute of Technology', coords: [59.3467, 18.0716] },
+  SU:         { name: 'Stockholm University',              coords: [59.36397, 18.06002] },
+  KI:         { name: 'Karolinska Institutet',             coords: [59.34848, 18.02790] },
+  SSE:        { name: 'Stockholm School of Economics',     coords: [59.34170, 18.05726] },
+  Konstfack:  { name: 'Konstfack',                         coords: [59.29977, 17.99421] },
+  KMH:        { name: 'Royal College of Music',            coords: [59.34447, 18.08172] },
+  KKH:        { name: 'Royal Institute of Art',            coords: [59.32458, 18.08213] },
+};
+let selectedSchool = 'KTH';
+
+function schools(){ return (currentData && currentData.schools) || FALLBACK_SCHOOLS; }
+function defaultSchool(){ return (currentData && currentData.default_school) || 'KTH'; }
+function schoolCoords(id){ const s = schools()[id]; return s ? s.coords : FALLBACK_SCHOOLS.KTH.coords; }
+function centre(){ return schoolCoords(selectedSchool); }
+
+// Same maths as the server's haversine, so a campus the server didn't
+// precompute (old saved data, or the demo set) still gets a sane distance
+// rather than dropping out of the commute filter entirely.
+function haversineKm(a, b){
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
+  const h = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Commute numbers for whichever campus is selected. Prefers what the server
+// worked out (which may include real cycling routes and transit times), then
+// legacy top-level fields, then a client-side estimate from raw coordinates.
+function schoolMetrics(obj){
+  if (!obj) return null;
+  const per = obj.per_school && obj.per_school[selectedSchool];
+  if (per) return per;
+  if (selectedSchool === defaultSchool() && obj.straight_line) {
+    return { ...obj.straight_line, bike_source: 'estimate', transit_min: obj.transit_min };
+  }
+  if (obj.coords) {
+    const km = haversineKm(obj.coords, centre());
+    return { distance_km: Math.round(km * 100) / 100, bike_min: Math.round(km / 15 * 60 + 3),
+             walk_min: Math.round(km / 5 * 60), bike_source: 'estimate', transit_min: null };
+  }
+  return null;
+}
 const LINE_COLORS = { North: '#4C9FE8', South: '#E0596B', City: '#3FBF8F' };
 // Stockholm metro (tunnelbana) drawn station-to-station in each line's real
 // SL color — reference geography only, not clickable (interactive:false so
@@ -706,10 +761,16 @@ async function loadData(triggerRefresh){
 }
 
 function commuteMinutes(obj){
-  if (!obj) return Infinity;
-  if (typeof obj.transit_min === 'number') return obj.transit_min;
-  if (obj.straight_line) return obj.straight_line.bike_min;
+  const m = schoolMetrics(obj);
+  if (!m) return Infinity;
+  if (typeof m.transit_min === 'number') return m.transit_min;
+  if (typeof m.bike_min === 'number') return m.bike_min;
   return Infinity;
+}
+
+// "12 min bike" for a real routed time, "~12 min bike" for a guess.
+function bikeLabel(m){
+  return (m.bike_source === 'route' ? '' : '~') + m.bike_min + ' min bike';
 }
 
 function listingCommute(l){
@@ -752,9 +813,43 @@ function floorLabel(n){
 }
 
 function render(){
+  renderSchoolPicker();
   renderMeta();
   renderMap();
   renderSidebar();
+}
+
+function renderSchoolPicker(){
+  const sel = document.getElementById('schoolSelect');
+  const available = schools();
+  if (!available[selectedSchool]) selectedSchool = defaultSchool();
+  // Default campus first (Flask hands back JSON with its keys sorted, which
+  // would otherwise bury it mid-list), then the rest alphabetically.
+  const ids = Object.keys(available).sort((a, b) =>
+    a === defaultSchool() ? -1 : b === defaultSchool() ? 1 : a.localeCompare(b));
+  // Rebuild only when the option set actually changes, so re-rendering can't
+  // stomp on the user's selection or fight the open dropdown.
+  const signature = ids.join('|');
+  if (sel.dataset.signature !== signature) {
+    sel.dataset.signature = signature;
+    sel.innerHTML = ids.map(id => {
+      const s = available[id];
+      return `<option value="${id}">${id === s.name ? id : `${id} · ${s.name}`}</option>`;
+    }).join('');
+  }
+  sel.value = selectedSchool;
+  document.getElementById('brandTitle').textContent = `SSSB → ${selectedSchool} housing finder`;
+  document.title = `SSSB → ${selectedSchool} housing finder`;
+}
+
+function setSchool(id){
+  if (!schools()[id] || id === selectedSchool) return;
+  selectedSchool = id;
+  // Selection was made against the old centre, so it no longer means anything.
+  selectedArea = null;
+  if (routeLine) { leafletMap.removeLayer(routeLine); routeLine = null; }
+  render();
+  leafletMap.flyTo(centre(), Math.max(leafletMap.getZoom(), 12), { duration: 0.6 });
 }
 
 function renderMeta(){
@@ -793,7 +888,7 @@ function sssbListingsInArea(name){
 
 let leafletMap;
 function initMap(){
-  leafletMap = L.map('map', { zoomControl:true, attributionControl:false }).setView(KTH, 12);
+  leafletMap = L.map('map', { zoomControl:true, attributionControl:false }).setView(centre(), 12);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     maxZoom: 18
   }).addTo(leafletMap);
@@ -807,15 +902,6 @@ function initMap(){
     });
   });
 
-  const kthIcon = L.divIcon({ className:'', html:'<div class="kth-pulse"></div>', iconSize:[16,16] });
-  L.marker(KTH, { icon: kthIcon }).addTo(leafletMap).bindTooltip('KTH', {permanent:false, direction:'top'});
-
-  const schoolIcon = L.divIcon({ className:'', html:'<div class="school-pin"></div>', iconSize:[9,9] });
-  OTHER_SCHOOLS.forEach(school => {
-    L.marker(school.coords, { icon: schoolIcon }).addTo(leafletMap)
-      .bindTooltip(school.name, { direction:'top', opacity:0.85 });
-  });
-
   // .panel-header sticks just below .tabs — measure the real rendered
   // height rather than hardcoding it, so a font/zoom change can't leave a
   // gap or overlap between the two sticky bars.
@@ -823,9 +909,29 @@ function initMap(){
   if (tabsEl) document.documentElement.style.setProperty('--tabs-h', tabsEl.offsetHeight + 'px');
 }
 
+// The selected campus gets the pulsing marker; the rest stay as small
+// reference pins. Redrawn on every render so switching campus moves it.
+function renderSchools(){
+  const pulse = L.divIcon({ className:'', html:'<div class="kth-pulse"></div>', iconSize:[16,16] });
+  const pin = L.divIcon({ className:'', html:'<div class="school-pin"></div>', iconSize:[9,9] });
+  Object.entries(schools()).forEach(([id, school]) => {
+    const isCentre = id === selectedSchool;
+    const marker = L.marker(school.coords, {
+      icon: isCentre ? pulse : pin,
+      zIndexOffset: isCentre ? 500 : 0,
+      interactive: !isCentre,
+    }).addTo(leafletMap);
+    marker.bindTooltip(isCentre ? school.name : `${school.name} — click to centre here`,
+                       { direction:'top', opacity: isCentre ? 1 : 0.85 });
+    if (!isCentre) marker.on('click', () => setSchool(id));
+    markers.push(marker);
+  });
+}
+
 function renderMap(){
   markers.forEach(m => leafletMap.removeLayer(m));
   markers = [];
+  renderSchools();
 
   if (activeProviders.has('SSSB')) {
     const visible = new Set(visibleSssbAreaNames());
@@ -873,7 +979,7 @@ function selectArea(name){
   const area = currentData.areas[name];
   if (routeLine) leafletMap.removeLayer(routeLine);
   if (area && area.coords) {
-    routeLine = L.polyline([area.coords, KTH], {
+    routeLine = L.polyline([area.coords, centre()], {
       color: LINE_COLORS[area.group] || '#fff', weight:2, dashArray:'4 6', opacity:0.8
     }).addTo(leafletMap);
     leafletMap.flyTo(area.coords, 13, { duration:0.6 });
@@ -888,11 +994,16 @@ function clearSelection(){
 }
 
 function fmtCommute(obj){
+  const m = schoolMetrics(obj);
+  if (!m) return '';
   const parts = [];
-  if (obj.straight_line) {
-    parts.push(`<div class="gauge"><div class="g-label">Straight-line</div><div class="g-value">${obj.straight_line.distance_km}<small> km · ~${obj.straight_line.bike_min}min bike</small></div></div>`);
-  }
-  parts.push(`<div class="gauge"><div class="g-label">Transit (real)</div><div class="g-value">${typeof obj.transit_min === 'number' ? obj.transit_min + '<small> min</small>' : '<small>no API key set</small>'}</div></div>`);
+  const routed = m.bike_source === 'route';
+  // Label says which it is: a real cycling route, or a straight line with a
+  // speed guess on top. Never present the guess as measured.
+  parts.push(`<div class="gauge"><div class="g-label">${routed ? 'By bike (route)' : 'Straight-line'}</div>` +
+    `<div class="g-value">${routed ? m.bike_km : m.distance_km}` +
+    `<small> km · ${bikeLabel(m)}</small></div></div>`);
+  parts.push(`<div class="gauge"><div class="g-label">Transit (real)</div><div class="g-value">${typeof m.transit_min === 'number' ? m.transit_min + '<small> min</small>' : '<small>no API key set</small>'}</div></div>`);
   return parts.join('');
 }
 
@@ -921,9 +1032,9 @@ function sortListings(rows){
 
 function rowHtml(l, newIds){
   const commuteRef = l.provider === 'SSSB' ? (currentData.areas[l.area] || {}) : l;
-  const commute = typeof commuteRef.transit_min === 'number'
-    ? commuteRef.transit_min + ' min transit'
-    : (commuteRef.straight_line ? '~' + commuteRef.straight_line.bike_min + ' min bike' : '');
+  const cm = schoolMetrics(commuteRef);
+  const commute = !cm ? ''
+    : (typeof cm.transit_min === 'number' ? cm.transit_min + ' min transit' : bikeLabel(cm));
   const title = l.provider === 'SSSB' ? l.area : (l.address || l.area);
   const sub = l.provider === 'SSSB' ? (l.type ? l.type + ' · ' : '') : (l.area + ' · ');
   // Only what the listing actually states — a silent card shows neither.
@@ -1035,7 +1146,7 @@ function renderSidebar(){
       (l.provider === 'SSSB' && activeProviders.has('SSSB') && visibleAreas.has(l.area) && passesFilters(l)) ||
       (l.provider === 'Bostadsförmedlingen' && bfVisible.has(l.id))
     );
-    const bits = [`within ${maxCommuteMin} min`];
+    const bits = [`within ${maxCommuteMin} min of ${selectedSchool}`];
     if (maxQueueDays !== null) bits.push(`≤${maxQueueDays.toLocaleString()} queue days`);
     if (maxRentSek !== null) bits.push(`≤${maxRentSek.toLocaleString()} kr`);
     if (minSizeSqm !== null) bits.push(`≥${minSizeSqm} m²`);
@@ -1152,6 +1263,8 @@ document.getElementById('providerChips').addEventListener('click', (e) => {
   if (p === 'SSSB' && !activeProviders.has('SSSB')) clearSelection();
   render();
 });
+
+document.getElementById('schoolSelect').addEventListener('change', (e) => setSchool(e.target.value));
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadData(true));
 document.getElementById('browseAllBtn').addEventListener('click', toggleBrowseAll);
