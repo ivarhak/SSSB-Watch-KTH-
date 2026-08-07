@@ -858,8 +858,18 @@ function setSchool(id){
 
 function renderMeta(){
   const d = currentData;
-  document.getElementById('lastUpdated').textContent =
+  const updated = document.getElementById('lastUpdated');
+  updated.textContent =
     'updated ' + new Date(d.generated_at).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'});
+  // Data more than an hour old means no scrape has landed in a while — worth
+  // flagging, because "updated <a date>" reads as current at a glance and stale
+  // listings look exactly like real ones.
+  const ageMin = (Date.now() - new Date(d.generated_at).getTime()) / 60000;
+  const stale = !d.demo && ageMin > 60;
+  updated.style.color = stale ? 'var(--amber)' : '';
+  updated.title = stale
+    ? `These listings are ${Math.round(ageMin / 60)}h old — no scrape has completed since. Hit "Refresh listings".`
+    : '';
   const bySrc = {};
   d.listings.forEach(l => bySrc[l.provider] = (bySrc[l.provider]||0)+1);
   document.getElementById('listingCount').textContent =

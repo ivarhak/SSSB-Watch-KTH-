@@ -1044,6 +1044,28 @@ def load_previous() -> dict:
     return {"listings": [], "generated_at": None}
 
 
+def saved_data_age_minutes() -> float | None:
+    """How old the saved listings are, or None if there aren't any / the
+    timestamp is unreadable.
+
+    `--serve` uses this to decide whether to scrape before serving. It used to
+    check only whether the file existed, which meant a checkout carrying an old
+    data file would serve those listings as current until the first background
+    poll came round — up to `--interval` minutes of quietly showing stale
+    listings with a timestamp that looked fine.
+    """
+    if not CURRENT_FILE.exists():
+        return None
+    try:
+        generated_at = json.loads(CURRENT_FILE.read_text()).get("generated_at")
+        saved = datetime.fromisoformat(generated_at)
+    except (ValueError, TypeError, OSError):
+        return None
+    if saved.tzinfo is None:
+        saved = saved.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - saved).total_seconds() / 60
+
+
 def _notify_via_os(title: str, message: str) -> bool:
     """Fire a desktop notification using tools the OS already ships.
 
@@ -1429,7 +1451,18 @@ if __name__ == "__main__":
     elif args.serve:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
-        if not CURRENT_FILE.exists():
+        # Scrape before serving unless the saved listings are still fresh, so a
+        # checkout that came with an old data file can't be presented as current.
+        age = saved_data_age_minutes()
+        if age is None:
+            print("no saved listings yet — scraping before serving...")
+        elif age > args.interval:
+            print(f"saved listings are {age:.0f} min old (older than the "
+                  f"{args.interval:g} min interval) — scraping before serving...")
+        else:
+            print(f"serving saved listings from {age:.0f} min ago; "
+                  f"next auto-check in under {args.interval:g} min")
+        if age is None or age > args.interval:
             run_scrape(debug=args.debug, use_login=args.with_login,
                        http_only=args.http_only, bike_routes=not args.no_bike_routes)
         serve(interval_minutes=args.interval, use_login=args.with_login,

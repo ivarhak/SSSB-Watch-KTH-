@@ -168,6 +168,12 @@ with "Start in" set to this folder.
 
 ## 6. Notes / known limitations
 
+- **First run scrapes before serving.** `--serve` scrapes on startup unless the
+  saved listings are newer than your `--interval`, and prints which it's doing.
+  `data/current_listings.json` is regenerated output and deliberately *not* in
+  the repo — it used to be, which meant a fresh clone was served month-old test
+  listings that looked current. If the "updated" time in the top-right turns
+  amber, nothing has scraped in over an hour.
 - **Coordinates**: area coordinates are looked up automatically via
   OpenStreetMap (free, no key) and cached in `data/geocode_cache.json`. If a
   pin looks wrong on the map, open that file and hand-correct the
