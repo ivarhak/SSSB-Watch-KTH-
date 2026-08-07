@@ -3,3 +3,6 @@ debug_page.html
 __pycache__/
 *.pyc
 venv/
+
+# local AI/session context — useful to keep, not worth publishing
+CLAUDE.md
