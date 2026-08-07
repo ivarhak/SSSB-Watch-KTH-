@@ -1364,6 +1364,22 @@ def serve(interval_minutes: float, use_login: bool = False,
         return jsonify(run_scrape(use_login=use_login, http_only=http_only,
                                   bike_routes=bike_routes))
 
+    @app.route("/api/status")
+    def api_status():
+        """Just the timestamp, so the dashboard can check whether anything
+        changed without pulling the whole listing set (~100 KB) every minute.
+        Data only changes once per --interval, so the vast majority of those
+        polls used to transfer and re-render an identical payload.
+        """
+        generated_at = None
+        if CURRENT_FILE.exists():
+            try:
+                generated_at = json.loads(CURRENT_FILE.read_text()).get("generated_at")
+            except ValueError:
+                pass
+        return jsonify({"generated_at": generated_at,
+                        "poll_interval_min": interval_minutes})
+
     @app.route("/api/refresh", methods=["POST"])
     def api_refresh():
         return jsonify(run_scrape(use_login=use_login, http_only=http_only,

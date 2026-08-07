@@ -705,6 +705,9 @@ let minFloor = null;
 let maxFloor = null;
 let minYears = null;
 let currentData = null;
+// generated_at of whatever is currently on screen, so the poll can tell
+// "nothing changed" from "new scrape landed" without refetching everything.
+let lastGeneratedAt = null;
 let selectedArea = null;   // SSSB area name, or null
 let markers = [];
 let routeLine = null;
@@ -756,6 +759,7 @@ async function loadData(triggerRefresh){
     currentData = DEMO_DATA;
     showBanner('Showing example data — start the local server (python sssb_kth_monitor.py --serve) and open http://localhost:5055 for live listings.');
   }
+  lastGeneratedAt = currentData.generated_at;
   btn.classList.remove('spinning');
   render();
 }
@@ -1272,10 +1276,28 @@ document.getElementById('browseAllBtn').addEventListener('click', toggleBrowseAl
 initMap();
 loadData(false);
 
-// Pick up whatever the background --serve auto-check produces, without
-// needing a manual click or page reload. This just reads the cached
-// /api/listings (cheap) — it does NOT trigger a new scrape itself.
-setInterval(() => loadData(false), 60000);
+// Pick up whatever the background --serve auto-check produces, without needing
+// a manual click or page reload. Checking once a minute is what keeps the delay
+// between a scrape finishing and it appearing here down to a minute — the
+// scrape lands at an unpredictable point in its interval, so polling only as
+// often as it runs would leave the page a whole cycle stale.
+//
+// The check itself asks /api/status (a timestamp, tens of bytes) and only pulls
+// the full ~100 KB payload and re-renders when that timestamp actually moves.
+// Neither triggers a scrape.
+async function pollForChanges(){
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) return;
+    const { generated_at } = await res.json();
+    if (generated_at && generated_at !== lastGeneratedAt) loadData(false);
+  } catch (e) {
+    // Server stopped, or this file was opened standalone. Keep showing what's
+    // already on screen — a failed poll must never replace live listings with
+    // the demo set.
+  }
+}
+setInterval(pollForChanges, 60000);
 </script>
 </body>
 </html>
