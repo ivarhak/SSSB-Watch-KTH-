@@ -65,12 +65,25 @@ LOGIN_URL = "https://minasidor.sssb.se/en/login/"
 # click through a numbered pager at all.
 LISTINGS_URL = "https://minasidor.sssb.se/lediga-bostader/?pagination=1&paginationantal=200"
 
-# Bostadsförmedlingen (Stockholm's city housing agency) exposes all current
-# ads as plain JSON here — no login, no browser needed. Svenska Bostäder's
-# student apartments are advertised THROUGH this same system (their own site
-# links every listing to bostad.stockholm.se/bostad/<id>), so this one feed
-# covers both of Ivar's requested extra sources.
-BF_ALL_ADS_URL = "https://bostad.stockholm.se/Lista/AllaAnnonser"
+# Bostadsförmedlingen (Stockholm's city housing agency) publishes all current
+# ads as JSON, no login needed. Svenska Bostäder's student apartments are
+# advertised THROUGH this same system (their own site links every listing to
+# bostad.stockholm.se/bostad/<id>), so this one feed covers both of Ivar's
+# requested extra sources.
+#
+# CONFIRMED BROKEN 2026-08-08: /Lista/AllaAnnonser now 404s — it was carried
+# over from a community scraper and never verified. The candidates below are
+# tried in order and the first one returning a JSON list wins; set
+# BF_ADS_URL in the environment to override without editing this file.
+# To find the real one: open bostad.stockholm.se's search page, DevTools →
+# Network → Fetch/XHR, and copy the request that returns the ad list.
+BF_ALL_ADS_URLS = [u for u in [
+    os.environ.get("BF_ADS_URL"),
+    "https://bostad.stockholm.se/Lista/AllaAnnonser",
+    "https://bostad.stockholm.se/AllaAnnonser",
+    "https://bostad.stockholm.se/api/annonser",
+] if u]
+BF_ALL_ADS_URL = BF_ALL_ADS_URLS[0]  # kept for anything referencing the old name
 
 # Real cycling directions, no API key: FOSSGIS's public Valhalla instance,
 # which routes over OSM's actual bike network instead of pretending a straight
@@ -120,6 +133,21 @@ AREAS = {
     ],
 }
 ALL_AREAS = [a for group in AREAS.values() for a in group]
+
+# SSSB's own name for an area doesn't always match what its listing cards print.
+# Confirmed live (2026-08-08): the cards for Öregrundsgatan say "Munin" (and
+# presumably "Hugin"), never the combined "Hugin & Munin" that SSSB uses on its
+# area pages, so those listings were coming back area="Unknown" and dropping off
+# the map. Longest needle wins, so a plain area name always beats an alias.
+AREA_ALIASES = {
+    "Hugin": "Hugin & Munin",
+    "Munin": "Hugin & Munin",
+}
+# (needle, canonical area) pairs, longest needle first
+_AREA_NEEDLES = sorted(
+    [(a, a) for a in ALL_AREAS] + list(AREA_ALIASES.items()),
+    key=lambda pair: len(pair[0]), reverse=True,
+)
 
 # Real street addresses (pulled from each area's page on sssb.se/en/) used to
 # geocode precisely — geocoding on the bare area name alone (e.g. "Balder,
@@ -633,13 +661,12 @@ def _parse_listing_from_link(link, url: str) -> dict:
     if not card_text:
         card_text = node.get_text(" ", strip=True)[:500]
 
-    area = None
-    for area_name in ALL_AREAS:
-        if area_name.lower() in card_text.lower():
-            area = area_name
+    area = "Unknown"
+    lowered = card_text.lower()
+    for needle, canonical in _AREA_NEEDLES:
+        if needle.lower() in lowered:
+            area = canonical
             break
-    if area is None:
-        area = "Unknown"
 
     (housing_type, queue_days, rent_sek, size_sqm, floor,
      max_years, el_included) = _parse_card_fields(card_text)
@@ -876,6 +903,9 @@ _ENDPOINT_HINT_RE = re.compile(
     r"[^\"\x27()\s]*)", re.IGNORECASE)
 
 
+_reported_js_shell = False
+
+
 def fetch_sssb_http(debug: bool = False) -> list[dict] | None:
     """Read the SSSB vacancy list with a plain HTTP GET — no browser at all.
 
@@ -917,18 +947,23 @@ def fetch_sssb_http(debug: bool = False) -> list[dict] | None:
 
     links = _refid_links_from_html(html)
     if not links:
+        global _reported_js_shell
         placeholders = html.count("{{")
         print(f"  ! no 'refid=' links in the raw HTML ({placeholders} '{{{{' template "
               "placeholder(s) found) — the page is drawn by JavaScript, so this "
-              "browserless path can't read it.")
-        candidates = sorted(set(_ENDPOINT_HINT_RE.findall(html)))[:25]
-        if candidates:
-            print("  Candidate data endpoints spotted in the page — one of these is probably "
-                  "what its JS calls for the listings:")
-            for c in candidates:
-                print(f"    {c}")
-            print("  Paste that list into the chat and the scraper can target it directly, "
-                  "which would drop the browser requirement for good.")
+              "browserless path can't read it; falling back to the browser.")
+        # The candidate-endpoint dump is a wall of text and it's the same every
+        # time, so print it once per process (and on --debug) rather than on
+        # every background poll.
+        if not _reported_js_shell or debug:
+            _reported_js_shell = True
+            candidates = sorted(set(_ENDPOINT_HINT_RE.findall(html)))[:25]
+            if candidates:
+                print("  Candidate data endpoints spotted in the page — one of these is probably "
+                      "what its JS calls for the listings:")
+                for c in candidates:
+                    print(f"    {c}")
+                print("  Targeting it directly would drop the browser requirement for good.")
         return None
 
     expected_total = _expected_total_from_html(html)
@@ -1009,20 +1044,58 @@ def load_previous() -> dict:
     return {"listings": [], "generated_at": None}
 
 
+def _notify_via_os(title: str, message: str) -> bool:
+    """Fire a desktop notification using tools the OS already ships.
+
+    Preferred over plyer because plyer's macOS backend needs `pyobjus`, a
+    compiled extension that frequently won't install — confirmed on Ivar's Mac,
+    where it raised ModuleNotFoundError and killed the notification. `osascript`
+    is present on every macOS install and needs nothing.
+    """
+    import shutil
+    import subprocess
+
+    if sys.platform == "darwin":
+        # json.dumps gives a correctly-escaped double-quoted AppleScript string.
+        script = f"display notification {json.dumps(message)} with title {json.dumps(title)}"
+        cmd = ["osascript", "-e", script]
+    elif sys.platform.startswith("linux") and shutil.which("notify-send"):
+        cmd = ["notify-send", title, message]
+    else:
+        return False
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def _summarise_areas(listings: list[dict], limit: int = 5) -> str:
+    """"Lappkärrsberget (16), Kungshamra (5), …" — a count per area rather than
+    one entry per listing, which for a 63-listing first run was a wall of
+    repeated names in the terminal."""
+    from collections import Counter
+    counts = Counter(l["area"] for l in listings)
+    shown = ", ".join(f"{area} ({n})" for area, n in counts.most_common(limit))
+    if len(counts) > limit:
+        shown += f", +{len(counts) - limit} more area(s)"
+    return shown
+
+
 def notify_new(new_listings: list[dict]):
     if not new_listings:
         return
-    try:
+    title = f"SSSB: {len(new_listings)} new listing(s)"
+    message = _summarise_areas(new_listings)
+
+    if _notify_via_os(title, message):
+        return
+    try:  # plyer covers Windows, and anything the branch above doesn't
         from plyer import notification
-        areas = ", ".join(sorted({l["area"] for l in new_listings}))
-        notification.notify(
-            title=f"SSSB: {len(new_listings)} new listing(s)",
-            message=f"In: {areas}",
-            timeout=15,
-        )
+        notification.notify(title=title, message=message, timeout=15)
     except Exception as e:
-        print(f"  ! desktop notification failed ({e}) — new listings: "
-              f"{[l['area'] for l in new_listings]}")
+        print(f"  ! desktop notification unavailable ({type(e).__name__}) — "
+              f"{len(new_listings)} new: {message}")
 
 
 # ── Main pipeline ────────────────────────────────────────────────────────
@@ -1054,16 +1127,39 @@ def fetch_bostadsformedlingen() -> list[dict]:
     output alone.
     """
     print("fetching Bostadsförmedlingen ads (bostad.stockholm.se)...")
-    try:
-        resp = requests.get(
-            BF_ALL_ADS_URL,
-            headers={"User-Agent": "Mozilla/5.0 (personal student-housing monitor)"},
-            timeout=25,
-        )
-        resp.raise_for_status()
-        ads = resp.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"  ! Bostadsförmedlingen fetch failed ({e}) — continuing with SSSB only")
+    ads = None
+    for url in BF_ALL_ADS_URLS:
+        try:
+            resp = requests.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (personal student-housing monitor)",
+                         "Accept": "application/json"},
+                timeout=25,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+        except (requests.RequestException, ValueError) as e:
+            reason = getattr(getattr(e, "response", None), "status_code", None) or type(e).__name__
+            print(f"  · {url} → {reason}")
+            continue
+        # Some endpoints wrap the list in an envelope rather than returning it bare.
+        if isinstance(payload, dict):
+            for key in ("annonser", "results", "items", "data", "Annonser"):
+                if isinstance(payload.get(key), list):
+                    payload = payload[key]
+                    break
+        if isinstance(payload, list):
+            print(f"  · {url} → OK")
+            ads = payload
+            break
+        print(f"  · {url} → unexpected shape ({type(payload).__name__})")
+
+    if ads is None:
+        print("  ! No Bostadsförmedlingen endpoint worked — continuing with SSSB only.\n"
+              "    Their old /Lista/AllaAnnonser feed is gone. To fix: open the search page on\n"
+              "    bostad.stockholm.se, DevTools → Network → Fetch/XHR, find the request that\n"
+              "    returns the ad list, and either set BF_ADS_URL=<that url> in your environment\n"
+              "    or add it to BF_ALL_ADS_URLS at the top of this file.")
         return []
 
     if not isinstance(ads, list):
