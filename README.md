@@ -236,13 +236,12 @@ with "Start in" set to this folder.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
   there's no need to hammer their login endpoint, and it's not clear how
   they'd react to it.
-- **Bostadsförmedlingen is temporarily unavailable.** Their old public feed
-  (`/Lista/AllaAnnonser`) started returning 404, so runs are SSSB-only for now
-  and the terminal says so. Once the current endpoint is known, set
-  `BF_ADS_URL=<url>` in your environment (or add it to `BF_ALL_ADS_URLS` in the
-  script) and BF listings come back with no other changes. To find it: open the
-  search page on bostad.stockholm.se, DevTools → Network → Fetch/XHR, and copy
-  the request that returns the ad list.
+- **Bostadsförmedlingen: student housing only.** The feed
+  (`bostad.stockholm.se/AllaAnnonser/`) carries the whole Stockholm rental
+  queue; only ads flagged as student housing are kept. The flag is read
+  tolerantly, so a renamed field shows up as a loud terminal warning listing
+  the ad's real keys rather than silently returning zero listings. If the feed
+  moves again, `BF_ADS_URL=<url>` overrides it without editing the script.
 - **Desktop notifications** need nothing extra on macOS — the script uses the
   built-in `osascript`. (`plyer`, listed in requirements, needs a compiled
   `pyobjus` extension that often won't install; it's only a fallback for

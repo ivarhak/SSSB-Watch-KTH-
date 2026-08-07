@@ -79,9 +79,12 @@ LISTINGS_URL = "https://minasidor.sssb.se/lediga-bostader/?pagination=1&paginati
 # Network → Fetch/XHR, and copy the request that returns the ad list.
 BF_ALL_ADS_URLS = [u for u in [
     os.environ.get("BF_ADS_URL"),
-    "https://bostad.stockholm.se/Lista/AllaAnnonser",
+    # Confirmed from the real site's own network traffic (2026-08-08): the
+    # search page's JS bundle XHRs this and gets ~554 kB of JSON back. The
+    # trailing slash matters, and the old path had a spurious /Lista/ prefix.
+    "https://bostad.stockholm.se/AllaAnnonser/",
     "https://bostad.stockholm.se/AllaAnnonser",
-    "https://bostad.stockholm.se/api/annonser",
+    "https://bostad.stockholm.se/Lista/AllaAnnonser",
 ] if u]
 BF_ALL_ADS_URL = BF_ALL_ADS_URLS[0]  # kept for anything referencing the old name
 
@@ -1137,6 +1140,36 @@ def _bf_field(ad: dict, *names, default=None):
     return default
 
 
+def _bf_truthy(value) -> bool:
+    """Coerce a feed value to a boolean. Needed because a JSON "false" or "Nej"
+    is a non-empty string, and so truthy in Python — which would have quietly
+    let non-student ads through."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() not in ("", "false", "0", "nej", "no", "none", "null")
+    return bool(value)
+
+
+def _bf_is_student(ad: dict) -> bool | None:
+    """Is this ad student housing? None means the feed didn't say in any way we
+    recognise — kept distinct from False so a wrong field name shows up as a
+    loud diagnostic instead of silently filtering every ad away."""
+    for key in ("Student", "student", "IsStudent", "StudentBostad",
+                "Studentbostad", "ArStudentbostad", "StudentApartment"):
+        value = _bf_field(ad, key)
+        if value is not None:
+            return _bf_truthy(value)
+    # Some feeds carry a category/type string rather than a flag.
+    category = _bf_field(ad, "Kategori", "Category", "Typ", "Type",
+                         "BostadTyp", "Bostadstyp", default="")
+    if isinstance(category, str) and category:
+        return "student" in category.lower()
+    return None
+
+
 def fetch_bostadsformedlingen() -> list[dict]:
     """Fetch current STUDENT ads from Bostadsförmedlingen's public JSON feed.
 
@@ -1154,8 +1187,14 @@ def fetch_bostadsformedlingen() -> list[dict]:
         try:
             resp = requests.get(
                 url,
-                headers={"User-Agent": "Mozilla/5.0 (personal student-housing monitor)",
-                         "Accept": "application/json"},
+                headers={
+                    "User-Agent": "Mozilla/5.0 (personal student-housing monitor)",
+                    "Accept": "application/json",
+                    # The site's own page fetches this via XHR; some setups
+                    # reject requests that don't look like they came from there.
+                    "Referer": "https://bostad.stockholm.se/bostad/",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
                 timeout=25,
             )
             resp.raise_for_status()
@@ -1191,10 +1230,17 @@ def fetch_bostadsformedlingen() -> list[dict]:
     if ads:
         print(f"  (first ad's fields: {sorted(ads[0].keys())[:20]}...)")
 
+    # Student housing only — the rest of this feed is the general Stockholm
+    # rental queue, which isn't what this tool is for.
+    unknown_flag = 0
     listings = []
     for ad in ads:
-        if not _bf_field(ad, "Student", "student"):
-            continue  # only student housing
+        is_student = _bf_is_student(ad)
+        if is_student is None:
+            unknown_flag += 1
+            continue
+        if not is_student:
+            continue
 
         ad_id = _bf_field(ad, "AnnonsId", "annonsid", "Id")
         lat = _bf_field(ad, "KoordinatLatitud", "Latitud", "lat")
@@ -1229,7 +1275,18 @@ def fetch_bostadsformedlingen() -> list[dict]:
         })
 
     with_coords = sum(1 for l in listings if l["coords"])
-    print(f"  kept {len(listings)} student ad(s) ({with_coords} with coordinates)")
+    print(f"  kept {len(listings)} student ad(s) of {len(ads)} total "
+          f"({with_coords} with coordinates)")
+
+    # If the feed never told us whether an ad is student housing, the field name
+    # is wrong — say so instead of just reporting zero, which looks identical to
+    # "there are no student ads right now".
+    if unknown_flag:
+        print(f"  ! {unknown_flag} ad(s) had no recognisable student flag, so they were "
+              "skipped. If that's most of the feed, the field name has changed — "
+              "add it to _bf_is_student(). Keys on the first ad:")
+        if ads:
+            print(f"    {sorted(ads[0].keys())}")
     if listings and with_coords == 0:
         print("  ! none had parseable coordinates — the lat/lon field names likely "
               "changed; check the printed field list above and update _bf_field calls.")
