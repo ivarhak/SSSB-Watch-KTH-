@@ -242,10 +242,13 @@ with "Start in" set to this folder.
   tolerantly, so a renamed field shows up as a loud terminal warning listing
   the ad's real keys rather than silently returning zero listings. If the feed
   moves again, `BF_ADS_URL=<url>` overrides it without editing the script.
-- **Clicking a Bostadsförmedlingen listing** opens their own search page zoomed
-  to that address, not a per-ad page — their detail-URL pattern isn't known
-  (`/bostad/<id>/` 404s). If you find it, set
-  `BF_LISTING_URL="https://…/{id}"` and links become ad-specific.
+- **Clicking a Bostadsförmedlingen listing** opens that ad on their site. The
+  URL is `bostad.stockholm.se/bostad/<n>/`, where `<n>` is a year-prefixed
+  9-digit ad number — *not* the feed's `AnnonsId`, which is shorter and 404s.
+  Since it's unclear which key holds it, the script finds it by value shape and
+  reports in the terminal how many ads got a direct link; any it can't resolve
+  fall back to a search-page link zoomed on the address rather than a dead page.
+  `BF_LISTING_URL="https://…/{id}"` overrides the template.
 - **Bostadsförmedlingen ads use straight-line bike estimates**, not routed
   ones, so a scrape stays quick: there are ~100 of them and they rotate, so
   routing them all costs ~700 paced requests (about 9 minutes) per run. The 26

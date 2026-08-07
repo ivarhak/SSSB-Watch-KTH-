@@ -1140,19 +1140,39 @@ def _bf_field(ad: dict, *names, default=None):
     return default
 
 
-# Per-ad link. `bostad.stockholm.se/bostad/<AnnonsId>/` was a guess and it
-# 404s — confirmed 2026-08-08. Rather than ship a dead link, fall back to
-# Bostadsförmedlingen's own search page zoomed onto the ad's coordinates, built
-# only from query parameters observed working on their real search URL
-# (s/n/w/e/sort/student). Set BF_LISTING_URL to a template like
-# "https://bostad.stockholm.se/annons/{id}" once the real pattern is known.
-BF_LISTING_URL_TEMPLATE = os.environ.get("BF_LISTING_URL")
+# Per-ad link. The route is bostad.stockholm.se/bostad/<n>/ — confirmed against
+# a real working URL, .../bostad/202612197/ — but <n> is NOT `AnnonsId`. That
+# field held a 6-digit number (299744) which 404s; the id in the URL is a
+# year-prefixed 9-digit "annonsnummer". Since we don't know which key carries
+# it, find it by shape: prefer likely names, then fall back to scanning every
+# field for a value that looks like one. Anything unresolvable degrades to a
+# search-page link zoomed on the ad rather than a dead detail page.
+BF_LISTING_URL_TEMPLATE = os.environ.get("BF_LISTING_URL",
+                                         "https://bostad.stockholm.se/bostad/{id}/")
 _BF_SEARCH_URL = "https://bostad.stockholm.se/bostad/"
+_BF_AD_NUMBER_RE = re.compile(r"^20\d{7}$")   # e.g. 202612197
+_BF_AD_NUMBER_KEYS = ("AnnonsNummer", "Annonsnummer", "AnnonsNr", "Annonsnr",
+                      "AnnonsNummerVisning", "Nummer", "AnnonsId", "Id",
+                      "BostadId", "ObjektId", "Referens")
 
 
-def _bf_listing_url(ad_id, coords) -> str:
-    if BF_LISTING_URL_TEMPLATE and ad_id is not None:
-        return BF_LISTING_URL_TEMPLATE.format(id=ad_id)
+def _bf_ad_number(ad: dict):
+    """The number that appears in a /bostad/<n>/ URL, or None."""
+    for key in _BF_AD_NUMBER_KEYS:
+        value = _bf_field(ad, key)
+        if value is not None and _BF_AD_NUMBER_RE.match(str(value).strip()):
+            return str(value).strip()
+    # Named guesses exhausted — any field holding a value of that shape will do.
+    for value in ad.values():
+        if isinstance(value, (str, int)) and _BF_AD_NUMBER_RE.match(str(value).strip()):
+            return str(value).strip()
+    return None
+
+
+def _bf_listing_url(ad: dict, coords) -> str:
+    number = _bf_ad_number(ad)
+    if number:
+        return BF_LISTING_URL_TEMPLATE.format(id=number)
     if coords:
         lat, lon = coords
         # ~200m box, so their map opens on this address with the ad visible.
@@ -1295,7 +1315,7 @@ def fetch_bostadsformedlingen() -> list[dict]:
             "floor": _bf_field(ad, "Vaning", "Våning", "Floor", "Etage"),
             "deadline": _bf_field(ad, "AnnonseradTill", "SistaAnsokan", "AnmalanSenast"),
             "coords": coords,
-            "url": _bf_listing_url(ad_id, coords),
+            "url": _bf_listing_url(ad, coords),
         })
 
     with_coords = sum(1 for l in listings if l["coords"])
@@ -1314,6 +1334,16 @@ def fetch_bostadsformedlingen() -> list[dict]:
     if listings and with_coords == 0:
         print("  ! none had parseable coordinates — the lat/lon field names likely "
               "changed; check the printed field list above and update _bf_field calls.")
+
+    # The per-ad link needs a year-prefixed 9-digit ad number found by shape, so
+    # say plainly whether that worked — the alternative is a search-page link,
+    # which is useful but not the specific ad.
+    direct = sum(1 for l in listings if l["url"] and "?" not in l["url"])
+    if listings:
+        print(f"  {direct} of {len(listings)} got a direct listing link"
+              + ("" if direct == len(listings) else
+                 "; the rest link to the search page zoomed on the address "
+                 "(no ad number found — paste the field list above and it's a one-line fix)"))
     for l in listings[:5]:
         print(f"    [{l['area']}] {l['address']} rent={l['rent_sek']} size={l['size_sqm']} "
               f"landlord={l['landlord']}")
