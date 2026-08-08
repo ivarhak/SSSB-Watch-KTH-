@@ -231,6 +231,10 @@ with "Start in" set to this folder.
   would mean opening each listing's own page during every scrape (76 extra
   page loads), and it's not confirmed that page states it either. The floor
   sliders are the practical stand-in for "no walk-up".
+  Bostadsförmedlingen's feed *does* publish a lift flag (and a balcony one), so
+  those ads show *elevator* / *balcony* on their row where stated — but for the
+  same reason as electricity above, they're display-only, since a filter would
+  have hidden every SSSB listing rather than narrowed anything.
 - **If SSSB changes their site**, the selectors in step 3 are the only
   place you should need to touch.
 - **Rate limiting**: don't drop the cron interval much below ~15 minutes —
@@ -243,12 +247,14 @@ with "Start in" set to this folder.
   the ad's real keys rather than silently returning zero listings. If the feed
   moves again, `BF_ADS_URL=<url>` overrides it without editing the script.
 - **Clicking a Bostadsförmedlingen listing** opens that ad on their site. The
-  URL is `bostad.stockholm.se/bostad/<n>/`, where `<n>` is a year-prefixed
-  9-digit ad number — *not* the feed's `AnnonsId`, which is shorter and 404s.
-  Since it's unclear which key holds it, the script finds it by value shape and
-  reports in the terminal how many ads got a direct link; any it can't resolve
-  fall back to a search-page link zoomed on the address rather than a dead page.
-  `BF_LISTING_URL="https://…/{id}"` overrides the template.
+  feed publishes the link itself in a `Url` field, so that's what's used. Where
+  it's missing, the script falls back to building
+  `bostad.stockholm.se/bostad/<n>/`, where `<n>` is a year-prefixed 9-digit ad
+  number — *not* the feed's `AnnonsId`, which is shorter and 404s — found by
+  value shape since it's unclear which key holds it. The terminal reports the
+  split between the two, and anything unresolvable links to a search page zoomed
+  on the address rather than a dead page.
+  `BF_LISTING_URL="https://…/{id}"` overrides the fallback template.
 - **Bostadsförmedlingen ads use straight-line bike estimates**, not routed
   ones, so a scrape stays quick: there are ~100 of them and they rotate, so
   routing them all costs ~700 paced requests (about 9 minutes) per run. The 26
@@ -256,16 +262,20 @@ with "Start in" set to this folder.
 - **Desktop notifications** need nothing extra on macOS — the script uses the
   built-in `osascript`. (`plyer`, listed in requirements, needs a compiled
   `pyobjus` extension that often won't install; it's only a fallback for
-  Windows now.)
+  Windows now.) If a notification doesn't appear, the terminal prints what each
+  path actually reported, plus the new listings themselves, so nothing is lost
+  when the popup is. On macOS the usual cause is notification permission for
+  whichever terminal app you ran it from: **System Settings → Notifications**.
 - **Bostadsförmedlingen**: `fetch_bostadsformedlingen()` pulls Stockholm's
-  city housing agency's public ad feed
-  (`bostad.stockholm.se/Lista/AllaAnnonser`) and keeps only the student ads
-  — no login, no API key. Svenska Bostäder doesn't run a separate student
-  queue of its own; their listings show up through this same feed (tagged
-  with a `landlord`). Each ad carries its own coordinates, so these get
-  individual purple pins on the map instead of SSSB's per-area dots, and
-  sort by application deadline instead of queue days, since BF doesn't
-  publish a queue-days figure up front.
+  city housing agency's public ad feed (`bostad.stockholm.se/AllaAnnonser/`)
+  and keeps only the student ads — no login, no API key. Svenska Bostäder
+  doesn't run a separate student queue of its own; their listings show up
+  through this same feed. There's no landlord field in it, so the row is
+  labelled with the *queue* the ad belongs to (`KoNamn`), which for the
+  external queues is the landlord running it. Each ad carries its own
+  coordinates, so these get individual purple pins on the map instead of
+  SSSB's per-area dots, and sort by application deadline instead of queue
+  days, since BF doesn't publish a queue-days figure up front.
 - **Provider filter**: the dashboard's "Provider" chips (top bar) toggle
   SSSB and Bostadsförmedlingen independently of the SSSB-only "SSSB lines"
   filter. The "Queues to join" sidebar tab explains how to actually

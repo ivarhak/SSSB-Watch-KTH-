@@ -1069,13 +1069,21 @@ def saved_data_age_minutes() -> float | None:
     return (datetime.now(timezone.utc) - saved).total_seconds() / 60
 
 
-def _notify_via_os(title: str, message: str) -> bool:
-    """Fire a desktop notification using tools the OS already ships.
+def _notify_via_os(title: str, message: str) -> str | None:
+    """Fire a desktop notification using tools the OS already ships. Returns
+    None on success, or a short reason string on failure.
 
     Preferred over plyer because plyer's macOS backend needs `pyobjus`, a
     compiled extension that frequently won't install — confirmed on Ivar's Mac,
     where it raised ModuleNotFoundError and killed the notification. `osascript`
     is present on every macOS install and needs nothing.
+
+    It returns a *reason* rather than False because when this path failed on
+    Ivar's Mac all he saw was plyer's downstream `NotImplementedError`, which
+    said nothing about why the osascript attempt before it didn't work. The
+    usual cause is macOS notification permission for the terminal app —
+    osascript reports that on stderr and exits non-zero, so surfacing its stderr
+    turns a dead end into an actionable message.
     """
     import shutil
     import subprocess
@@ -1087,12 +1095,21 @@ def _notify_via_os(title: str, message: str) -> bool:
     elif sys.platform.startswith("linux") and shutil.which("notify-send"):
         cmd = ["notify-send", title, message]
     else:
-        return False
+        return f"no notification command for platform {sys.platform!r}"
     try:
         subprocess.run(cmd, check=True, capture_output=True, timeout=10)
-        return True
-    except Exception:
-        return False
+        return None
+    except subprocess.CalledProcessError as e:
+        detail = (e.stderr or b"").decode(errors="replace").strip().splitlines()
+        return (f"{cmd[0]} exited {e.returncode}"
+                + (f": {detail[0]}" if detail else "")
+                + ("\n    On macOS this is usually notification permission: System "
+                   "Settings → Notifications → your terminal app (or Script Editor)."
+                   if sys.platform == "darwin" else ""))
+    except FileNotFoundError:
+        return f"{cmd[0]} not found on PATH"
+    except Exception as e:
+        return f"{cmd[0]} failed ({type(e).__name__}: {e})"
 
 
 def _summarise_areas(listings: list[dict], limit: int = 5) -> str:
@@ -1113,14 +1130,19 @@ def notify_new(new_listings: list[dict]):
     title = f"SSSB: {len(new_listings)} new listing(s)"
     message = _summarise_areas(new_listings)
 
-    if _notify_via_os(title, message):
+    os_reason = _notify_via_os(title, message)
+    if os_reason is None:
         return
     try:  # plyer covers Windows, and anything the branch above doesn't
         from plyer import notification
         notification.notify(title=title, message=message, timeout=15)
     except Exception as e:
-        print(f"  ! desktop notification unavailable ({type(e).__name__}) — "
-              f"{len(new_listings)} new: {message}")
+        # Both paths failed, so print the listings and both reasons. The
+        # per-listing summary is the real point of the notification anyway; the
+        # popup is just a nicety.
+        print(f"  ! desktop notification unavailable — {len(new_listings)} new: {message}")
+        print(f"    · OS notifier: {os_reason}")
+        print(f"    · plyer: {type(e).__name__}: {e}")
 
 
 # ── Main pipeline ────────────────────────────────────────────────────────
@@ -1140,16 +1162,21 @@ def _bf_field(ad: dict, *names, default=None):
     return default
 
 
-# Per-ad link. The route is bostad.stockholm.se/bostad/<n>/ — confirmed against
-# a real working URL, .../bostad/202612197/ — but <n> is NOT `AnnonsId`. That
-# field held a 6-digit number (299744) which 404s; the id in the URL is a
+# Per-ad link. **The feed publishes one itself, in `Url`** — confirmed from a
+# real run's printed field list — so use that first and don't guess. Everything
+# below it is fallback for if that field ever disappears.
+#
+# The route is bostad.stockholm.se/bostad/<n>/ — confirmed against a real
+# working URL, .../bostad/202612197/ — but <n> is NOT `AnnonsId`. That field
+# held a 6-digit number (299744) which 404s; the id in the URL is a
 # year-prefixed 9-digit "annonsnummer". Since we don't know which key carries
 # it, find it by shape: prefer likely names, then fall back to scanning every
 # field for a value that looks like one. Anything unresolvable degrades to a
 # search-page link zoomed on the ad rather than a dead detail page.
+BF_SITE_ROOT = "https://bostad.stockholm.se"
 BF_LISTING_URL_TEMPLATE = os.environ.get("BF_LISTING_URL",
-                                         "https://bostad.stockholm.se/bostad/{id}/")
-_BF_SEARCH_URL = "https://bostad.stockholm.se/bostad/"
+                                         BF_SITE_ROOT + "/bostad/{id}/")
+_BF_SEARCH_URL = BF_SITE_ROOT + "/bostad/"
 _BF_AD_NUMBER_RE = re.compile(r"^20\d{7}$")   # e.g. 202612197
 _BF_AD_NUMBER_KEYS = ("AnnonsNummer", "Annonsnummer", "AnnonsNr", "Annonsnr",
                       "AnnonsNummerVisning", "Nummer", "AnnonsId", "Id",
@@ -1169,7 +1196,28 @@ def _bf_ad_number(ad: dict):
     return None
 
 
+def _bf_feed_url(ad: dict) -> str | None:
+    """The link the feed itself gives for this ad, absolutised, or None.
+
+    Preferred over `_bf_ad_number()` because it needs no guessing: the
+    shape-based search reported a 100% hit rate, but "found a 9-digit number
+    starting with 20" is not the same claim as "found the ad's number", and
+    nothing in that heuristic would notice if it started matching an unrelated
+    field.
+    """
+    raw = _bf_field(ad, "Url", "url", "Lank", "Länk", "Link", "DetaljUrl")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    raw = raw.strip()
+    if raw.startswith(("http://", "https://")):
+        return raw
+    return BF_SITE_ROOT + "/" + raw.lstrip("/")
+
+
 def _bf_listing_url(ad: dict, coords) -> str:
+    from_feed = _bf_feed_url(ad)
+    if from_feed:
+        return from_feed
     number = _bf_ad_number(ad)
     if number:
         return BF_LISTING_URL_TEMPLATE.format(id=number)
@@ -1193,6 +1241,21 @@ def _bf_truthy(value) -> bool:
     if isinstance(value, str):
         return value.strip().lower() not in ("", "false", "0", "nej", "no", "none", "null")
     return bool(value)
+
+
+def _bf_tristate(ad: dict, *names) -> bool | None:
+    """A yes/no field from the feed, or None when the feed doesn't say.
+
+    Same convention as `_parse_el_included()` on the SSSB side: absence has to
+    stay distinguishable from a stated "no", because the dashboard only prints
+    features a listing actually claims. Collapsing None to False here would
+    silently turn "didn't mention a lift" into "has no lift".
+    """
+    for name in names:
+        value = _bf_field(ad, name)
+        if value is not None:
+            return _bf_truthy(value)
+    return None
 
 
 def _bf_is_student(ad: dict) -> bool | None:
@@ -1277,6 +1340,7 @@ def fetch_bostadsformedlingen() -> list[dict]:
     # Student housing only — the rest of this feed is the general Stockholm
     # rental queue, which isn't what this tool is for.
     unknown_flag = 0
+    links_from_feed = 0
     listings = []
     for ad in ads:
         is_student = _bf_is_student(ad)
@@ -1289,7 +1353,14 @@ def fetch_bostadsformedlingen() -> list[dict]:
         ad_id = _bf_field(ad, "AnnonsId", "annonsid", "Id")
         lat = _bf_field(ad, "KoordinatLatitud", "Latitud", "lat")
         lon = _bf_field(ad, "KoordinatLongitud", "Longitud", "lng", "lon")
-        landlord = _bf_field(ad, "Hyresvard", "Hyresvärd", "Uthyrare", default="")
+        # There is no landlord/hyresvärd field in this feed — checked against a
+        # real run's full key list. `KoNamn` is the name of the queue the ad
+        # belongs to, which for the external queues (`Externko`) is the landlord
+        # running it, and for BF's own stock is just "Bostadsförmedlingen" —
+        # which the dashboard already treats as "no specific landlord". The
+        # hyresvärd names stay tried first in case the field ever appears.
+        landlord = _bf_field(ad, "Hyresvard", "Hyresvärd", "Uthyrare",
+                             "KoNamn", "Konamn", default="")
         district = _bf_field(ad, "Stadsdel", "Omrade", "Område", default="") or ""
         kommun = _bf_field(ad, "Kommun", default="") or ""
 
@@ -1297,6 +1368,9 @@ def fetch_bostadsformedlingen() -> list[dict]:
             coords = [float(lat), float(lon)] if lat and lon else None
         except (TypeError, ValueError):
             coords = None
+
+        if _bf_feed_url(ad):
+            links_from_feed += 1
 
         listings.append({
             "id": f"bf-{ad_id}",
@@ -1309,10 +1383,19 @@ def fetch_bostadsformedlingen() -> list[dict]:
             "rent_sek": _bf_field(ad, "Hyra", "Manadshyra"),
             "size_sqm": _bf_field(ad, "Yta", "Kvm"),
             "rooms": _bf_field(ad, "AntalRum", "Rum"),
-            # Not known to be in the feed — tried tolerantly so the dashboard's
-            # floor filter can use it if it is. None just means "not stated",
-            # which never hides a listing.
+            # `Lagenhetstyp` is this feed's equivalent of the SSSB card's type
+            # line ("Korridorrum", "1 rum och kök"), so it renders in the same
+            # slot on the row.
+            "type": _bf_field(ad, "Lagenhetstyp", "Lägenhetstyp", "BostadTyp") or None,
+            # `Vaning` is confirmed present, so the dashboard's floor sliders do
+            # reach BF ads. None still means "not stated", which never hides one.
             "floor": _bf_field(ad, "Vaning", "Våning", "Floor", "Etage"),
+            # Display only, never filtered — same rule as SSSB's `el_included`.
+            # BF publishes a lift flag that SSSB's list page never states, so
+            # filtering on it would hide every SSSB listing rather than narrow
+            # anything. See "No elevator data exists" in the project notes.
+            "elevator": _bf_tristate(ad, "Hiss", "hiss"),
+            "balcony": _bf_tristate(ad, "Balkong", "balkong"),
             "deadline": _bf_field(ad, "AnnonseradTill", "SistaAnsokan", "AnmalanSenast"),
             "coords": coords,
             "url": _bf_listing_url(ad, coords),
@@ -1335,18 +1418,27 @@ def fetch_bostadsformedlingen() -> list[dict]:
         print("  ! none had parseable coordinates — the lat/lon field names likely "
               "changed; check the printed field list above and update _bf_field calls.")
 
-    # The per-ad link needs a year-prefixed 9-digit ad number found by shape, so
-    # say plainly whether that worked — the alternative is a search-page link,
-    # which is useful but not the specific ad.
-    direct = sum(1 for l in listings if l["url"] and "?" not in l["url"])
+    # Per-ad links come from the feed's own `Url` where it has one, and from the
+    # shape-matched ad number otherwise. Report the split rather than a single
+    # "worked" count: a drop in the first number is the early warning that the
+    # feed renamed that field and we're back to guessing.
     if listings:
-        print(f"  {direct} of {len(listings)} got a direct listing link"
-              + ("" if direct == len(listings) else
-                 "; the rest link to the search page zoomed on the address "
-                 "(no ad number found — paste the field list above and it's a one-line fix)"))
+        # Counted by which branch produced the link, not by whether it has a
+        # query string — a feed-supplied Url is free to carry one.
+        fallback = sum(1 for l in listings if l["url"].startswith(_BF_SEARCH_URL + "?"))
+        guessed = len(listings) - links_from_feed - fallback
+        print(f"  links: {links_from_feed} of {len(listings)} from the feed's own Url field"
+              + (f", {guessed} from a shape-matched ad number" if guessed else "")
+              + (f", {fallback} fell back to a search-page link" if fallback else ""))
+        # These four come from fields the feed was only recently confirmed to
+        # carry, so show how many ads actually filled them in.
+        stated = {name: sum(1 for l in listings if l[name] is not None)
+                  for name in ("type", "floor", "elevator", "balcony")}
+        print("  stated by feed: "
+              + ", ".join(f"{name} {n}/{len(listings)}" for name, n in stated.items()))
     for l in listings[:5]:
         print(f"    [{l['area']}] {l['address']} rent={l['rent_sek']} size={l['size_sqm']} "
-              f"landlord={l['landlord']}")
+              f"floor={l['floor']} lift={l['elevator']} queue={l['landlord']}")
     if len(listings) > 5:
         print(f"    ... and {len(listings) - 5} more")
     return listings

@@ -741,9 +741,9 @@ const DEMO_DATA = {
     { id:"d3", provider:"SSSB", landlord:"SSSB", area:"Lappkärrsberget", queue_days:1230, rent_sek:5600, size_sqm:20, url:null },
     { id:"d4", provider:"SSSB", landlord:"SSSB", area:"Tanto", queue_days:1990, rent_sek:7400, size_sqm:32, url:null },
     { id:"d5", provider:"SSSB", landlord:"SSSB", area:"Kungshamra", queue_days:640, rent_sek:5900, size_sqm:22, url:null },
-    { id:"bf-1", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Albanovägen 4", rent_sek:8340, size_sqm:25, rooms:1, deadline:"2026-08-12", coords:[59.3527,18.0553], transit_min:6, straight_line:{distance_km:0.6,bike_min:5,walk_min:8}, url:null },
-    { id:"bf-2", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Ruddammsvägen 65", rent_sek:6213, size_sqm:14, rooms:1, deadline:"2026-08-12", coords:[59.3536,18.0596], transit_min:5, straight_line:{distance_km:0.5,bike_min:5,walk_min:7}, url:null },
-    { id:"bf-3", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Kungsholmen", address:"Sankt Göransgatan 95", rent_sek:6632, size_sqm:20, rooms:1, deadline:"2026-08-12", coords:[59.3355,18.0203], transit_min:22, straight_line:{distance_km:3.2,bike_min:16,walk_min:38}, url:null },
+    { id:"bf-1", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Albanovägen 4", type:"1 rum och kök", rent_sek:8340, size_sqm:25, rooms:1, floor:3, elevator:true, balcony:false, deadline:"2026-08-12", coords:[59.3527,18.0553], transit_min:6, straight_line:{distance_km:0.6,bike_min:5,walk_min:8}, url:null },
+    { id:"bf-2", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Norra Djurgården", address:"Ruddammsvägen 65", type:"Studentbostad", rent_sek:6213, size_sqm:14, rooms:1, floor:1, elevator:false, balcony:false, deadline:"2026-08-12", coords:[59.3536,18.0596], transit_min:5, straight_line:{distance_km:0.5,bike_min:5,walk_min:7}, url:null },
+    { id:"bf-3", provider:"Bostadsförmedlingen", landlord:"Svenska Bostäder", area:"Kungsholmen", address:"Sankt Göransgatan 95", type:"1 rum och kök", rent_sek:6632, size_sqm:20, rooms:1, floor:5, elevator:true, balcony:true, deadline:"2026-08-12", coords:[59.3355,18.0203], transit_min:22, straight_line:{distance_km:3.2,bike_min:16,walk_min:38}, url:null },
   ],
   new_listing_ids: ["d1","bf-2"]
 };
@@ -1057,11 +1057,20 @@ function rowHtml(l, newIds){
   const commute = !cm ? ''
     : (typeof cm.transit_min === 'number' ? cm.transit_min + ' min transit' : bikeLabel(cm));
   const title = l.provider === 'SSSB' ? l.area : (l.address || l.area);
-  const sub = l.provider === 'SSSB' ? (l.type ? l.type + ' · ' : '') : (l.area + ' · ');
+  // BF ads lead with their area (their title is the street address); SSSB rows
+  // lead with the area as the title, so they don't repeat it. Both then show the
+  // apartment type where the source states one.
+  const sub = [l.provider === 'SSSB' ? null : l.area, l.type]
+    .filter(Boolean).map(v => v + ' · ').join('');
   // Only what the listing actually states — a silent card shows neither.
   const extras = [];
   if (l.floor != null) extras.push(Number(l.floor) === 0 ? 'ground floor' : 'floor ' + l.floor);
   if (l.el_included === true) extras.push('el ingår');
+  // Elevator and balcony come from Bostadsförmedlingen's feed, which states
+  // them; SSSB's list page never does, so these are display-only and there is
+  // deliberately no filter for them — see the notes on el_included.
+  if (l.elevator === true) extras.push('elevator');
+  if (l.balcony === true) extras.push('balcony');
   if (l.max_years != null) extras.push('max ' + l.max_years + ' år');
   return `
     <div class="listing-row" onclick="handleRowClick('${l.id.replace(/'/g,"\\'")}')">
@@ -1104,7 +1113,9 @@ function matchesSearch(l, q){
   if (!q) return true;
   const haystack = [l.area, l.address, l.landlord, l.type, l.rent_sek, l.size_sqm,
                     l.queue_days, l.deadline, l.floor, l.max_years,
-                    l.el_included === true ? 'elström ingår el included' : null, l.raw_text]
+                    l.el_included === true ? 'elström ingår el included' : null,
+                    l.elevator === true ? 'elevator hiss' : null,
+                    l.balcony === true ? 'balcony balkong' : null, l.raw_text]
     .filter(v => v != null)
     .join(' ')
     .toLowerCase();
