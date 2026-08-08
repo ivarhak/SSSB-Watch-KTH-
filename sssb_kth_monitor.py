@@ -24,8 +24,10 @@ reachable as plain JSON — which would drop the browser requirement entirely �
 is still an open question; see CLAUDE.md.
 
 Usage:
+    ./start.command                             # easiest: sets up the venv if needed, then serves
+    python sssb_kth_monitor.py                  # serve the dashboard and open it in a browser
     python sssb_kth_monitor.py --once           # one scrape, save + notify, exit
-    python sssb_kth_monitor.py --serve          # run scrape + start local API/dashboard server
+    python sssb_kth_monitor.py --no-browser     # serve, but don't open a browser
     python sssb_kth_monitor.py --http-only      # no browser: fail instead of falling back to Selenium
     python sssb_kth_monitor.py --debug          # also dump rendered HTML to debug_page.html
     python sssb_kth_monitor.py --with-login     # only if SSSB starts requiring a login again
@@ -54,9 +56,27 @@ except ImportError:
 # ── Config ────────────────────────────────────────────────────────────────
 
 KEYRING_SERVICE = "sssb-kth-tool"
-RESROBOT_API_KEY = os.environ.get("RESROBOT_API_KEY") or (
-    keyring.get_password(KEYRING_SERVICE, "resrobot_api_key") if KEYRING_AVAILABLE else None
-)
+
+
+def _keyring_get(username: str):
+    """Read one secret from the OS keychain, or None.
+
+    `keyring` importing successfully doesn't mean it can *work*: with no backend
+    available (a headless Linux box with no Secret Service, a bare container) the
+    first call raises `NoKeyringError`. This used to run bare at import time, so
+    the whole tool died on line 58 with a keyring stack trace before doing
+    anything — while trying to read an optional API key that isn't needed at all.
+    Nothing here requires credentials, so a missing keychain must degrade to None.
+    """
+    if not KEYRING_AVAILABLE:
+        return None
+    try:
+        return keyring.get_password(KEYRING_SERVICE, username)
+    except Exception:
+        return None
+
+
+RESROBOT_API_KEY = os.environ.get("RESROBOT_API_KEY") or _keyring_get("resrobot_api_key")
 
 LOGIN_URL = "https://minasidor.sssb.se/en/login/"
 # Ivar found that SSSB's listings page takes `pagination`/`paginationantal`
@@ -208,9 +228,13 @@ def _prompt_and_store():
             "  Save to this computer's secure keychain so you're not asked again? [y/N]: "
         ).strip().lower()
         if save == "y":
-            keyring.set_password(KEYRING_SERVICE, "username", username)
-            keyring.set_password(KEYRING_SERVICE, "password", password)
-            print("  Saved to your OS keychain. Run --forget-login later to remove it.")
+            try:
+                keyring.set_password(KEYRING_SERVICE, "username", username)
+                keyring.set_password(KEYRING_SERVICE, "password", password)
+                print("  Saved to your OS keychain. Run --forget-login later to remove it.")
+            except Exception as e:
+                print(f"  Couldn't write to the keychain ({type(e).__name__}: {e}).")
+                print("  Continuing with these credentials for this run only.")
     else:
         print("  (install the 'keyring' package to save this for next time)")
 
@@ -227,12 +251,11 @@ def get_credentials() -> tuple[str, str]:
     if _cred_cache:
         return _cred_cache["username"], _cred_cache["password"]
 
-    if KEYRING_AVAILABLE:
-        kr_user = keyring.get_password(KEYRING_SERVICE, "username")
-        kr_pass = keyring.get_password(KEYRING_SERVICE, "password") if kr_user else None
-        if kr_user and kr_pass:
-            _cred_cache.update(username=kr_user, password=kr_pass)
-            return kr_user, kr_pass
+    kr_user = _keyring_get("username")
+    kr_pass = _keyring_get("password") if kr_user else None
+    if kr_user and kr_pass:
+        _cred_cache.update(username=kr_user, password=kr_pass)
+        return kr_user, kr_pass
 
     env_user, env_pass = os.environ.get("SSSB_USERNAME"), os.environ.get("SSSB_PASSWORD")
     if env_user and env_pass:
@@ -259,8 +282,8 @@ def forget_credentials():
     for key in ("username", "password", "resrobot_api_key"):
         try:
             keyring.delete_password(KEYRING_SERVICE, key)
-        except keyring.errors.PasswordDeleteError:
-            pass
+        except Exception:
+            pass   # not stored, or no working backend — either way, nothing to remove
     print("Removed any saved credentials from your OS keychain.")
 
 
@@ -1581,9 +1604,46 @@ def _background_poll_loop(interval_minutes: float, use_login: bool = False,
             print(f"  ! auto-check failed, will retry next interval: {e}")
 
 
+def _port_in_use(port: int = None) -> bool:
+    """Is something already listening on our port?
+
+    Worth checking before doing anything else, because double-clicking the
+    launcher twice is an easy thing to do, and the alternative is a startup
+    scrape followed by a Flask "Address already in use" traceback.
+    """
+    import socket
+    with socket.socket() as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", port or PORT)) == 0
+
+
+def _open_browser_when_ready(timeout: float = 20.0):
+    """Open the dashboard once Flask is actually accepting connections.
+
+    Waiting for the port rather than sleeping a fixed amount matters because the
+    startup scrape runs first and takes about a minute with Chrome — opening the
+    browser on a timer would land on "connection refused" and need a manual
+    reload, which is exactly the friction this is meant to remove.
+    """
+    import socket
+    import webbrowser
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with socket.socket() as s:
+            s.settimeout(0.5)
+            if s.connect_ex(("127.0.0.1", PORT)) == 0:
+                webbrowser.open(f"http://localhost:{PORT}")
+                return
+        time.sleep(0.25)
+    # Not fatal: the URL is printed either way, so this is a convenience that
+    # failed, not a broken run.
+    print(f"  · couldn't open a browser automatically — open http://localhost:{PORT} yourself")
+
+
 def serve(interval_minutes: float, use_login: bool = False,
           http_only: bool = False, bike_routes: bool = True,
-          bf_bike_routes: bool = False):
+          bf_bike_routes: bool = False, open_browser: bool = True):
     from flask import Flask, jsonify, send_from_directory
     from flask_cors import CORS
 
@@ -1630,6 +1690,9 @@ def serve(interval_minutes: float, use_login: bool = False,
                      args=(interval_minutes, use_login, http_only, bike_routes, bf_bike_routes),
                      daemon=True).start()
 
+    if open_browser:
+        threading.Thread(target=_open_browser_when_ready, daemon=True).start()
+
     print(f"\nDashboard running → http://localhost:{PORT}")
     print(f"Auto-checking SSSB every {interval_minutes:g} min in the background (Ctrl+C to stop)\n")
     app.run(port=PORT, debug=False)
@@ -1640,7 +1703,11 @@ if __name__ == "__main__":
     parser.add_argument("--login", action="store_true", help="prompt for SSSB credentials and store them in your OS keychain")
     parser.add_argument("--forget-login", action="store_true", help="remove saved credentials from your OS keychain")
     parser.add_argument("--once", action="store_true", help="scrape once, save, notify, exit")
-    parser.add_argument("--serve", action="store_true", help="start local dashboard + API server")
+    parser.add_argument("--serve", action="store_true",
+                        help="start local dashboard + API server. This is what you want almost "
+                             "always, so it's also what running with no arguments at all does")
+    parser.add_argument("--no-browser", action="store_true",
+                        help="don't open the dashboard in your browser when --serve starts")
     parser.add_argument("--interval", type=float, default=15, help="minutes between auto-checks in --serve mode (default: 15)")
     parser.add_argument("--bike-routes-bf", action="store_true",
                         help="also compute real cycling routes for Bostadsförmedlingen ads. Off by "
@@ -1673,9 +1740,23 @@ if __name__ == "__main__":
         run_scrape(debug=args.debug, use_login=args.with_login,
                    http_only=args.http_only, bike_routes=not args.no_bike_routes,
                    bf_bike_routes=args.bike_routes_bf)
-    elif args.serve:
+    # Anything else — `--serve`, or no arguments at all — serves. Bare
+    # `python sssb_kth_monitor.py` used to print help and exit 1, which made the
+    # one mode you want every day the one you had to remember a flag for.
+    else:
         if args.interval < 5:
             parser.error("--interval below 5 minutes isn't a great idea — see README on rate limiting.")
+        # Already running? Point at it rather than scraping for a minute and then
+        # dying on "Address already in use" — double-clicking the launcher twice
+        # should land you on the dashboard, not a traceback.
+        if _port_in_use():
+            print(f"Already running → http://localhost:{PORT}")
+            print("(if that isn't this tool, something else has port "
+                  f"{PORT}; stop it and try again)")
+            if not args.no_browser:
+                import webbrowser
+                webbrowser.open(f"http://localhost:{PORT}")
+            sys.exit(0)
         # Scrape before serving unless the saved listings are still fresh, so a
         # checkout that came with an old data file can't be presented as current.
         age = saved_data_age_minutes()
@@ -1688,12 +1769,26 @@ if __name__ == "__main__":
             print(f"serving saved listings from {age:.0f} min ago; "
                   f"next auto-check in under {args.interval:g} min")
         if age is None or age > args.interval:
-            run_scrape(debug=args.debug, use_login=args.with_login,
-                       http_only=args.http_only, bike_routes=not args.no_bike_routes,
-                       bf_bike_routes=args.bike_routes_bf)
+            # A failed startup scrape must not stop the dashboard from coming up.
+            # It used to abort the process with a raw traceback, so a brief SSSB
+            # outage or a missing Chrome meant no dashboard at all — even with
+            # perfectly good saved listings on disk. Same policy as the
+            # background auto-check, which has always logged and carried on.
+            # SystemExit is deliberately not caught: that's --http-only's
+            # explicit "fail loudly" contract.
+            try:
+                run_scrape(debug=args.debug, use_login=args.with_login,
+                           http_only=args.http_only, bike_routes=not args.no_bike_routes,
+                           bf_bike_routes=args.bike_routes_bf)
+            except Exception as e:
+                print(f"\n  ! the startup scrape failed ({type(e).__name__}: {e})")
+                if age is None:
+                    print("    No saved listings either, so the dashboard will start empty.")
+                else:
+                    print(f"    Serving the saved listings from {age:.0f} min ago instead —"
+                          " they'll say so in the top right.")
+                print(f"    The background auto-check will try again in "
+                      f"{args.interval:g} min, or hit \"Refresh\" in the dashboard.\n")
         serve(interval_minutes=args.interval, use_login=args.with_login,
               http_only=args.http_only, bike_routes=not args.no_bike_routes,
-              bf_bike_routes=args.bike_routes_bf)
-    else:
-        parser.print_help()
-        sys.exit(1)
+              bf_bike_routes=args.bike_routes_bf, open_browser=not args.no_browser)

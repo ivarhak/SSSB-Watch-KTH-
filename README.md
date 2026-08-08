@@ -30,22 +30,50 @@ complexity than the convenience was worth.
 
 ## 2. Setup
 
-I would highly recommend running this on Pycharm or similar
+**Double-click `start.command`** (`start.bat` on Windows). That's it.
+
+It creates the virtual environment, installs the requirements, starts the
+server and opens the dashboard in your browser. Everything except the last two
+steps is skipped once it's been done, so every run after the first is just
+"double-click, dashboard opens". Any arguments you pass go straight through, so
+`./start.command --interval 30` works too.
+
+The only prerequisites are **Python 3.10+** and **Chrome** (or Chromium).
+`webdriver-manager` fetches the matching driver by itself. Chrome is only the
+fallback path for reading SSSB's listing page (see "How it reads SSSB" in
+section 4), but keep it installed so that fallback exists.
+
+There is no login step, and nothing ever prompts for input — so cron and Task
+Scheduler runs need nothing extra either.
+
+<details>
+<summary>Prefer to do it by hand, or run it from an IDE?</summary>
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+python sssb_kth_monitor.py      # no arguments = serve the dashboard
 ```
 
-There might be some other modules you need, simply pip install when your computer says you dont have them
+Running with no arguments serves the dashboard, which is what you want almost
+every time. In PyCharm or similar, point a run configuration at
+`sssb_kth_monitor.py` with no arguments and it'll do the same thing.
+</details>
 
-Chrome (or Chromium) needs to be installed — `webdriver-manager` handles the
-matching driver automatically. It's only used as a fallback (see "How it reads
-SSSB" in section 4), but keep it around so that fallback is there.
+<details>
+<summary>Putting it in your Dock or on your Desktop (macOS)</summary>
 
-That's the whole setup — there's no login step. Cron and Task Scheduler runs
-need nothing extra either, since nothing prompts for input.
+Drag `start.command` onto the Dock, or make an alias on the Desktop:
+
+```bash
+ln -s "$PWD/start.command" ~/Desktop/Student\ Housing.command
+```
+
+The alias keeps working when you `git pull`, since it points at the file rather
+than copying it. To give it a nicer icon, select the file in Finder, press
+Cmd+I, and paste an image onto the small icon in the top-left of the Info window.
+</details>
 
 <details>
 <summary>If SSSB ever starts requiring a login again</summary>
@@ -112,22 +140,29 @@ from that alone.
 
 ## 4. Running it
 
+**Dashboard** — double-click `start.command`, or from a terminal:
+```bash
+python sssb_kth_monitor.py          # no arguments needed
+```
+It scrapes if the saved listings are stale, serves the UI + API, and opens
+**http://localhost:5055** in your browser by itself (`--no-browser` if you'd
+rather it didn't). It then auto-checks SSSB in the background every 15 minutes
+(change with `--interval 30`, don't go below 5 — see the rate-limiting note
+below), and the dashboard polls for fresh results every 60 seconds, so you don't
+need to click anything for it to notice new listings — you'll just see them
+appear, plus the desktop notification. "Refresh" still triggers an immediate
+check on demand instead of waiting for the next scheduled one.
+
+If that startup scrape fails — SSSB briefly down, no network, Chrome missing —
+the dashboard still comes up and serves the last listings it saved, and says in
+the terminal what went wrong. The background auto-check retries on its own.
+
 **One-off check** (scrapes once, saves, notifies if there's something new, exits):
 ```bash
 python sssb_kth_monitor.py --once
 ```
-
-**Dashboard** (scrapes once if needed, then serves the UI + API):
-```bash
-python sssb_kth_monitor.py --serve
-```
-Open **http://localhost:5055** in your browser. It auto-checks SSSB in the
-background every 15 minutes by default (change with `--interval 30`, don't
-go below 5 — see rate-limiting note below), and the dashboard itself polls
-for fresh results every 60 seconds, so you don't need to click anything for
-it to notice new listings — you'll just see them appear, plus the desktop
-notification. "Refresh listings" still triggers an immediate check on demand
-instead of waiting for the next scheduled one.
+This one *does* exit non-zero if the scrape fails, since it's what cron runs and
+a silent success would be worse than a loud failure.
 
 > Opening `sssb_kth_dashboard.html` directly as a file (or previewing it in
 > Claude) shows example data with a banner saying so — the live version only
