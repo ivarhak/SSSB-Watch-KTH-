@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-SSSB → KTH Commute Monitor
-===========================
+Stockholm Student Housing Finder
+================================
 
 Scrapes SSSB's currently available student housing (minasidor.sssb.se) plus
 Bostadsförmedlingen's public student ads, works out how far each place is from
-KTH (both a rough straight-line estimate and a real public-transit time via
-Trafiklab's Resrobot API), diffs against the last run to spot newly-published
+your campus (both a rough straight-line estimate and a real public-transit time
+via Trafiklab's Resrobot API), diffs against the last run to spot newly-published
 listings, fires a desktop notification when something new shows up, and serves
 it all to the dashboard (sssb_kth_dashboard.html) over a tiny local API.
 
@@ -1127,7 +1127,8 @@ def _summarise_areas(listings: list[dict], limit: int = 5) -> str:
 def notify_new(new_listings: list[dict]):
     if not new_listings:
         return
-    title = f"SSSB: {len(new_listings)} new listing(s)"
+    # Not "SSSB:" — new_listings covers Bostadsförmedlingen ads too.
+    title = f"Student housing: {len(new_listings)} new listing(s)"
     message = _summarise_areas(new_listings)
 
     os_reason = _notify_via_os(title, message)

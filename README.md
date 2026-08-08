@@ -1,4 +1,4 @@
-# SSSB → KTH housing finder
+# Stockholm Student Housing Finder
 
 A local tool that checks what SSSB student housing is currently available,
 works out the commute to your campus for each area, and shows it all on a map —
@@ -159,7 +159,7 @@ dashboard process running all the time and just want periodic checks:
 ```bash
 crontab -e
 # add:
-*/30 * * * * cd /path/to/sssb-kth-tool && /path/to/venv/bin/python sssb_kth_monitor.py --once >> cron.log 2>&1
+*/30 * * * * cd /path/to/this-folder && /path/to/venv/bin/python sssb_kth_monitor.py --once >> cron.log 2>&1
 ```
 
 **Windows (Task Scheduler)**: create a basic task that runs

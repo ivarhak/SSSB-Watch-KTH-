@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SSSB → KTH housing finder</title>
+<title>Stockholm Student Housing Finder</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -444,8 +444,8 @@
   <div class="brand">
     <span class="dot"></span>
     <div>
-      <h1 id="brandTitle">SSSB → KTH housing finder</h1>
-      <div class="sub">SSSB + Bostadsförmedlingen, sorted for you</div>
+      <h1 id="brandTitle">Stockholm Student Housing Finder</h1>
+      <div class="sub" id="brandSub">SSSB + Bostadsförmedlingen · commutes to KTH</div>
     </div>
   </div>
 
@@ -849,8 +849,11 @@ function renderSchoolPicker(){
     }).join('');
   }
   sel.value = selectedSchool;
-  document.getElementById('brandTitle').textContent = `SSSB → ${selectedSchool} housing finder`;
-  document.title = `SSSB → ${selectedSchool} housing finder`;
+  // The name stays put and the selected campus lives in the subtitle — the
+  // campus is what changes, so it shouldn't be spliced into the project's name.
+  document.getElementById('brandSub').textContent =
+    `SSSB + Bostadsförmedlingen · commutes to ${selectedSchool}`;
+  document.title = `Stockholm Student Housing Finder — ${selectedSchool}`;
 }
 
 function setSchool(id){
