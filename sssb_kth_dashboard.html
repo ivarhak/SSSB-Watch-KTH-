@@ -121,7 +121,9 @@
     border:1px solid var(--navy-600);
     border-radius:8px;
     cursor:pointer;
-    align-self:flex-end;
+    /* Sits in a .control column under its own label, like the other controls,
+       so it lines up with the sliders rather than floating unlabelled. */
+    align-self:flex-start;
     transition:background .15s, border-color .15s, color .15s;
   }
   #advToggle:hover{border-color:var(--line-north);}
@@ -476,13 +478,18 @@
     </div>
   </div>
 
-  <button id="advToggle" aria-expanded="false" aria-controls="advFilters" title="More filters">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="3.2"/>
-      <path d="M12 2.6v3.1M12 18.3v3.1M4.3 7.1l2.7 1.55M17 15.35l2.7 1.55M4.3 16.9l2.7-1.55M17 8.65l2.7-1.55" stroke-linecap="round"/>
-    </svg>
-    <span class="adv-count" id="advCount" hidden></span>
-  </button>
+  <div class="control">
+    <label for="advToggle">More filters</label>
+    <button id="advToggle" aria-expanded="false" aria-controls="advFilters"
+            aria-label="More filters — size, floor and contract length"
+            title="More filters: size, floor and contract length">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M12 2.6v3.1M12 18.3v3.1M4.3 7.1l2.7 1.55M17 15.35l2.7 1.55M4.3 16.9l2.7-1.55M17 8.65l2.7-1.55" stroke-linecap="round"/>
+      </svg>
+      <span class="adv-count" id="advCount" hidden></span>
+    </button>
+  </div>
 
   <div class="control">
     <label>Provider</label>
