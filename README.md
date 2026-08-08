@@ -168,6 +168,18 @@ with "Start in" set to this folder.
 
 ## 6. Notes / known limitations
 
+- **Light and dark themes.** The toggle sits in the header next to the title;
+  dark is the default. Everything the page draws — including the map's area
+  roundels, provider pins and campus markers — reads its colours from CSS
+  custom properties, so switching repaints the map without re-rendering it. The
+  chosen theme is remembered in `localStorage`, wrapped in a `try` so the page
+  still loads where storage is blocked (it just won't persist there). That's the
+  only browser storage this file touches; everything else about what's new since
+  the last check is computed server-side.
+- **Area colours match the tunnelbana.** A roundel's colour is the line its
+  area sits on — North blue, South red, City green — matching the three lines
+  drawn on the map in official SL colours. Gray × means an area exists but has
+  nothing available (or nothing matching your filters) right now.
 - **First run scrapes before serving.** `--serve` scrapes on startup unless the
   saved listings are newer than your `--interval`, and prints which it's doing.
   `data/current_listings.json` is regenerated output and deliberately *not* in
